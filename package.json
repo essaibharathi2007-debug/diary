@@ -1,0 +1,22 @@
+{
+  "name": "cool-diary",
+  "version": "2.0.0",
+  "description": "Cool Diary - Private Voice Diary",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cloudinary": "^2.5.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^7.6.0",
+    "mongoose": "^9.10.2"
+  }
+}
