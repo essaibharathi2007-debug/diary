@@ -2598,9 +2598,14 @@ async function api(path, method = "GET", body = undefined) {
     options.body = JSON.stringify(body);
   }
 
+  const API_BASE =
+    location.port === "5173"
+      ? "http://localhost:5000/api"
+      : "/api";
+
   let response;
   try {
-    response = await fetch("/api" + path, options);
+    response = await fetch(API_BASE + path, options);
   } catch (error) {
     throw new Error("Server connect aagala. Backend running-aa check pannunga.");
   }
@@ -3172,67 +3177,136 @@ $("activitySave").onclick = () => saveEntry("activity");
 
 /* =====================================================
    DICTATION
+   - Mic starts only when user presses Dictate.
+   - No background dictation.
+   - Uses selected Tamil/English language.
 ===================================================== */
 const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
+let dictTarget = null;
+let dictButton = null;
+let dictActive = false;
+let dictRestarting = false;
+
+function resetDictationButton() {
+  if (dictButton) {
+    dictButton.textContent = dictButton.dataset.normal || "🎙 Dictate";
+    dictButton.classList.remove("listening");
+  }
+}
+
 function stopDictation() {
-  try { if (dictRec) dictRec.stop(); } catch (_) {}
+  dictActive = false;
+  dictRestarting = false;
+
+  try {
+    if (dictRec) {
+      dictRec.onend = null;
+      dictRec.onerror = null;
+      dictRec.stop();
+    }
+  } catch (_) {}
+
   dictRec = null;
+  dictTarget = null;
+  resetDictationButton();
+  dictButton = null;
 }
 
 function startDictation(targetId, lang, button) {
   if (!SR) {
-    alert("Chrome-la voice dictation try pannunga.");
+    alert("Chrome-la voice dictation support venum. Chrome use pannunga.");
     return;
   }
 
-  if (dictRec) {
+  if (dictActive) {
     stopDictation();
-    button.textContent = button.dataset.normal || "🎙 Dictate";
     return;
   }
 
+  /* Never allow another recognition session to run together. */
+  stopVoice();
+
+  dictTarget = targetId;
+  dictButton = button;
+  dictActive = true;
+  dictRestarting = false;
   button.dataset.normal = button.textContent;
   button.textContent = "⏹ Stop";
+  button.classList.add("listening");
 
-  dictRec = new SR();
-  dictRec.lang = lang;
-  dictRec.continuous = true;
-  dictRec.interimResults = false;
+  createDictationRecognition(lang);
+}
 
-  dictRec.onresult = event => {
+function createDictationRecognition(lang) {
+  if (!dictActive || !SR) return;
+
+  const recognition = new SR();
+  dictRec = recognition;
+  recognition.lang = lang || "ta-IN";
+  recognition.continuous = true;
+  recognition.interimResults = false;
+  recognition.maxAlternatives = 1;
+
+  recognition.onresult = event => {
     const text = [...event.results]
       .slice(event.resultIndex)
-      .map(result => result[0].transcript)
-      .join(" ");
+      .map(result => result[0]?.transcript || "")
+      .join(" ")
+      .trim();
 
-    const field = $(targetId);
+    const field = $(dictTarget);
     if (field && text) {
       field.value = field.value ? `${field.value} ${text}` : text;
+      field.dispatchEvent(new Event("input", { bubbles: true }));
     }
   };
 
-  dictRec.onerror = event => {
+  recognition.onerror = event => {
     console.warn("Dictation error:", event.error);
+
+    if (["not-allowed", "service-not-allowed"].includes(event.error)) {
+      stopDictation();
+      alert("Microphone permission Allow pannunga. Chrome site settings-la Mic = Allow pannunga.");
+      return;
+    }
+
+    if (event.error === "aborted") return;
+
+    /* Other temporary browser errors are retried while Dictate is active. */
   };
 
-  dictRec.onend = () => {
-    dictRec = null;
-    button.textContent = button.dataset.normal || "🎙 Dictate";
+  recognition.onend = () => {
+    if (dictRec === recognition) dictRec = null;
+
+    if (!dictActive || dictRestarting) {
+      if (!dictActive) resetDictationButton();
+      return;
+    }
+
+    dictRestarting = true;
+    setTimeout(() => {
+      dictRestarting = false;
+      if (dictActive) createDictationRecognition(lang);
+    }, 250);
   };
 
   try {
-    dictRec.start();
+    recognition.start();
   } catch (error) {
-    console.warn(error);
+    console.warn("Dictation start error:", error);
     stopDictation();
-    button.textContent = button.dataset.normal || "🎙 Dictate";
   }
 }
 
-$("diaryDict").onclick = () => startDictation("diaryText", $("diaryLang").value, $("diaryDict"));
-$("messageDict").onclick = () => startDictation("messageText", $("messageLang").value, $("messageDict"));
-$("activityDict").onclick = () => startDictation("activityText", $("activityLang").value, $("activityDict"));
+$("diaryDict").onclick = () =>
+  startDictation("diaryText", $("diaryLang").value, $("diaryDict"));
+
+$("messageDict").onclick = () =>
+  startDictation("messageText", $("messageLang").value, $("messageDict"));
+
+$("activityDict").onclick = () =>
+  startDictation("activityText", $("activityLang").value, $("activityDict"));
 
 /* =====================================================
    LOAD / RENDER ENTRIES
@@ -3439,10 +3513,17 @@ $("exportBtn").onclick = () => {
 };
 
 /* =====================================================
-   VOICE LOCK
-   LOCKED  -> wake phrase (default: hi cool)
-   OPEN    -> command: lock
-   UI ALWAYS SHOWS ONLY "Listening..."
+   VOICE LOCK / WAKE FLOW
+
+   Flow:
+   LOCKED  -> listens for "hey" -> listens for wake phrase -> opens diary
+   OPEN    -> listens for "hey" -> listens for "lock" -> locks diary
+
+   Browser limitation:
+   The browser microphone must remain in a listening/standby state to
+   detect the word "hey". It cannot be physically OFF and still hear it.
+   The recognition is stopped/restarted between each stage so only the
+   required command is acted on.
 ===================================================== */
 function normalizeVoice(text) {
   return String(text || "")
@@ -3462,8 +3543,8 @@ function voiceText(event) {
     .join(" ");
 }
 
-function setListeningText() {
-  if ($("lockMsg")) $("lockMsg").textContent = "Listening...";
+function setListeningText(text = "Listening for hey...") {
+  if ($("lockMsg")) $("lockMsg").textContent = text;
 }
 
 function stopVoice() {
@@ -3480,36 +3561,48 @@ function stopVoice() {
   } catch (_) {}
 
   voiceRec = null;
-  setListeningText();
-  $("micBtn")?.classList.remove("on");
+  $("micBtn")?.classList.remove("listening", "on");
 }
 
-function startVoice(mode) {
-  if (!SR || !T) {
-    setListeningText();
-    return;
-  }
+/* Start a recognition stage.  Stages are deliberately separate:
+   hey -> wake phrase / lock command. */
+function startVoiceStage(mode) {
+  if (!SR || !T) return;
 
-  stopVoice();
+  if (voiceRec) stopVoice();
 
   voiceMode = mode;
   voiceListening = true;
-  setListeningText();
-  $("micBtn")?.classList.add("on");
 
-  voiceRec = new SR();
-  voiceRec.lang = "en-IN";
-  voiceRec.continuous = true;
-  voiceRec.interimResults = true;
-  voiceRec.maxAlternatives = 3;
+  if (mode === "hey-unlock") {
+    setListeningText("Listening for hey...");
+  } else if (mode === "wake-unlock") {
+    setListeningText("Hey detected. Say your wake phrase...");
+  } else if (mode === "hey-lock") {
+    setListeningText("Listening for hey...");
+  } else if (mode === "lock-command") {
+    setListeningText("Hey detected. Say lock...");
+  }
 
-  voiceRec.onresult = event => {
+  const recognition = new SR();
+  voiceRec = recognition;
+  recognition.lang = "en-IN";
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 3;
+
+  recognition.onresult = event => {
     const text = normalizeVoice(voiceText(event));
-    if (!text) return;
+    if (!text || voiceRec !== recognition) return;
 
-    console.log("VOICE:", text);
+    if (mode === "hey-unlock") {
+      if (text.includes("hey")) {
+        startVoiceStage("wake-unlock");
+      }
+      return;
+    }
 
-    if (voiceMode === "unlock") {
+    if (mode === "wake-unlock") {
       const wake = wakePhrase();
       if (wake && text.includes(wake)) {
         openDiary();
@@ -3517,47 +3610,79 @@ function startVoice(mode) {
       return;
     }
 
-    if (voiceMode === "lock") {
-      const words = ` ${text} `;
-      if (text === "lock" || words.includes(" lock ")) {
+    if (mode === "hey-lock") {
+      if (text.includes("hey")) {
+        startVoiceStage("lock-command");
+      }
+      return;
+    }
+
+    if (mode === "lock-command") {
+      if (text.includes("lock")) {
         lockDiary();
       }
     }
   };
 
-  voiceRec.onend = () => {
-    $("micBtn")?.classList.remove("on");
-    if (voiceListening) restartVoice();
+  recognition.onend = () => {
+    if (voiceRec === recognition) voiceRec = null;
+
+    if (voiceListening && voiceMode === mode) {
+      restartVoiceStage(mode);
+    }
   };
 
-  voiceRec.onerror = event => {
+  recognition.onerror = event => {
     console.warn("Voice error:", event.error);
+
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       voiceListening = false;
-      setListeningText();
+      voiceMode = null;
+      $("lockMsg").textContent = "Microphone permission Allow pannunga.";
       return;
     }
-    if (voiceListening) restartVoice();
+
+    if (voiceListening && voiceMode === mode) {
+      restartVoiceStage(mode);
+    }
   };
 
   try {
-    voiceRec.start();
+    recognition.start();
   } catch (error) {
     console.warn("Voice start:", error);
-    restartVoice();
+    restartVoiceStage(mode);
   }
 }
 
-function restartVoice() {
-  if (!voiceListening || restartingVoice) return;
+function restartVoiceStage(mode) {
+  if (!voiceListening || restartingVoice || voiceMode !== mode) return;
+  if (mode.includes("unlock") && unlocked) return;
+  if (mode.includes("lock") && !unlocked) return;
 
   restartingVoice = true;
-  const mode = voiceMode;
-
   setTimeout(() => {
     restartingVoice = false;
-    if (voiceListening) startVoice(mode);
+    if (voiceListening && voiceMode === mode) {
+      startVoiceStage(mode);
+    }
   }, 700);
+}
+
+/* Begin the locked-screen flow: hey -> wake phrase. */
+function startVoice() {
+  if (!SR || !T || unlocked) return;
+  if (dictActive) stopDictation();
+  if (voiceListening) return;
+  startVoiceStage("hey-unlock");
+}
+
+/* Begin the unlocked-screen flow: hey -> lock. */
+function startLockVoice() {
+  if (!SR || !T || !unlocked) return;
+  if (dictActive) stopDictation();
+  if (voiceListening) return;
+  startVoiceStage("hey-lock");
 }
 
 function openDiary() {
@@ -3567,32 +3692,39 @@ function openDiary() {
   updateDashboard();
   renderEntries();
 
+  /* After opening, wait for: hey -> lock. */
   setTimeout(() => {
-    if (unlocked && T) startVoice("lock");
-  }, 700);
+    if (unlocked && T) startLockVoice();
+  }, 500);
 }
 
 function lockDiary() {
   if (!T) return;
 
+  stopDictation();
   stopVoice();
   unlocked = false;
   showPage("lock");
   $("typed").value = "";
-  setListeningText();
+  setListeningText("Listening for hey...");
 
+  /* After locking, wait for: hey -> wake phrase. */
   setTimeout(() => {
-    if (!unlocked && T) startVoice("unlock");
+    if (!unlocked && T) startVoice();
   }, 400);
 }
 
 $("lockBtn").onclick = lockDiary;
 
+/* Manual fallback on the lock screen. */
 $("micBtn").onclick = () => {
+  if (unlocked) return;
+
   if (voiceListening) {
     stopVoice();
+    $("lockMsg").textContent = "Mic stopped. Tap 🎙️ to start again.";
   } else {
-    startVoice(unlocked ? "lock" : "unlock");
+    startVoice();
   }
 };
 
@@ -3600,23 +3732,19 @@ $("typedBtn").onclick = () => {
   const typed = normalizeVoice($("typed").value);
   const wake = wakePhrase();
 
-  if (typed === "lock" && unlocked) {
-    lockDiary();
-    return;
-  }
-
   if (typed && wake && typed.includes(wake)) {
     openDiary();
     return;
   }
 
   $("typed").value = "";
-  setListeningText();
+  $("lockMsg").textContent = "Wake phrase correct illa 😅";
 };
 
 $("typed").addEventListener("keydown", event => {
   if (event.key === "Enter") $("typedBtn").click();
 });
+
 
 /* =====================================================
    APP START
