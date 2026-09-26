@@ -72,6 +72,25 @@ app.use((req, res, next) => {
     next();
 });
 
+// ======================================================
+// TWA / DIGITAL ASSET LINKS
+// (Lets the installed Android app verify it owns this
+// domain, so it opens full-screen without the browser
+// address bar.)
+// ======================================================
+
+app.get(
+    "/.well-known/assetlinks.json",
+    (req, res) => {
+        res.sendFile(
+            path.join(
+                __dirname,
+                "assetlinks.json"
+            )
+        );
+    }
+);
+
 // Static frontend
 app.use(
     express.static(
