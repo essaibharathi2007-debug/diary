@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.onrender.diary_7sof.twa",
+        "sha256_cert_fingerprints": ["A8:44:FA:6D:C0:28:13:BE:25:EF:95:4A:1C:28:5E:B9:03:1C:DE:1E:68:06:7E:54:ED:4F:BD:82:15:E3:42:CA"]
+      }
+    }]
