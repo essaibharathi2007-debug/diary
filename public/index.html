@@ -6,6 +6,11 @@
 
 <title>Cool Diary — Personal Space</title>
 
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#0fa3b1">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" href="/icon-192.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;500;600;700;800&family=Noto+Sans+Tamil:wght@400;500;600;700&display=swap" rel="stylesheet">
 
@@ -3801,6 +3806,15 @@ if (T) {
   start();
 } else {
   showPage("auth");
+}
+
+/* Register service worker for PWA install support (safe no-op for API calls). */
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.warn("SW registration failed:", err);
+    });
+  });
 }
 
 </script>
