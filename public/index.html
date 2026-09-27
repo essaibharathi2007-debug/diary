@@ -1140,6 +1140,55 @@ textarea{
   padding:20px;
 }
 
+
+.report-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+  margin-top:18px;
+}
+
+.report-option{
+  border:1px solid var(--line);
+  background:var(--soft);
+  color:var(--ink);
+  border-radius:18px;
+  padding:18px;
+  text-align:left;
+  cursor:pointer;
+  transition:.2s;
+}
+
+.report-option:hover{
+  transform:translateY(-2px);
+  border-color:var(--acc);
+}
+
+.report-option strong{
+  display:block;
+  font-size:16px;
+  margin-bottom:5px;
+}
+
+.report-option span{
+  color:var(--mut);
+  font-size:12px;
+  line-height:1.5;
+}
+
+.report-note{
+  margin:14px 0 0;
+  color:var(--mut);
+  font-size:12px;
+  line-height:1.5;
+}
+
+@media(max-width:600px){
+  .report-actions{
+    grid-template-columns:1fr;
+  }
+}
+
 .modal-head{
   display:flex;
 
@@ -1522,6 +1571,13 @@ textarea{
 
     <button
       class="icon-btn"
+      id="reportsBtn"
+    >
+      📊 Reports
+    </button>
+
+    <button
+      class="icon-btn"
       id="profileBtn"
     >
       👤 Profile
@@ -1617,42 +1673,12 @@ textarea{
   <div class="stat">
     <b id="s3">0</b>
     <span>Day streak</span>
-    <div id="streakMsg" style="font-size:11px;color:var(--mut);margin-top:4px;"></div>
   </div>
 
   <div class="stat">
     <b id="s4">0</b>
     <span>Photos</span>
   </div>
-
-</section>
-
-
-<!-- =====================================================
-     DAILY REMINDER
-===================================================== -->
-
-<section class="card" id="reminderCard">
-
-  <div class="card-title">
-    <h3>🔔 Daily reminder</h3>
-  </div>
-
-  <div class="field" style="display:flex;align-items:center;gap:10px;">
-    <input type="checkbox" id="remOn" style="width:18px;height:18px;margin:0;">
-    <label for="remOn" style="margin:0;">Every day diary எழுத reminder venuma?</label>
-  </div>
-
-  <div class="field">
-    <label>Reminder time</label>
-    <input type="time" id="remTime" value="20:00">
-  </div>
-
-  <p id="remStatus" style="color:var(--mut);font-size:13px;margin:8px 0 0;"></p>
-
-  <button type="button" class="ghost" id="remTestBtn" style="margin-top:10px;">
-    🔔 Test notification now
-  </button>
 
 </section>
 
@@ -2551,6 +2577,51 @@ textarea{
 
 
 <!-- =====================================================
+     REPORTS MODAL
+===================================================== -->
+
+<div
+  id="reportsModal"
+  class="modal hidden"
+>
+  <div class="modal-box">
+
+    <div class="modal-head">
+      <div>
+        <strong style="font-size:19px">📊 Reports</strong>
+        <div style="color:var(--mut);font-size:12px;margin-top:4px">
+          Download all your saved Cool Diary data in a professional report.
+        </div>
+      </div>
+
+      <button class="ghost" id="closeReports">
+        Close
+      </button>
+    </div>
+
+    <div class="report-actions">
+
+      <button class="report-option" id="downloadWord">
+        <strong>📄 Word Report</strong>
+        <span>Download a Word-compatible professional report containing your profile, summary and all saved entries.</span>
+      </button>
+
+      <button class="report-option" id="downloadPdf">
+        <strong>📕 PDF Report</strong>
+        <span>Open a clean print-ready report. In the print window choose <b>Save as PDF</b> to download it.</span>
+      </button>
+
+    </div>
+
+    <p class="report-note">
+      The report uses the data already saved in your account. Nothing in your diary is changed or deleted.
+    </p>
+
+  </div>
+</div>
+
+
+<!-- =====================================================
      IMAGE MODAL
 ===================================================== -->
 
@@ -2615,16 +2686,13 @@ let selectedStatus = "Completed";
 let voiceRec = null;
 let voiceListening = false;
 let voiceMode = null;
-let voiceStage = null;
 let restartingVoice = false;
-let voiceRestartDelay = 700;
 let dictRec = null;
 let photoData = {
   diary: [],
   message: [],
   activity: []
 };
-let swRegistrationPromise = null;
 
 /* =====================================================
    API
@@ -2951,7 +3019,6 @@ $("psave").onclick = async () => {
 
     if (unlocked && T) {
       stopVoice();
-      setTimeout(() => startVoice("lock"), 400);
     }
   } catch (error) {
     alert(error.message);
@@ -3007,251 +3074,12 @@ function updateStats() {
   $("s2").textContent = todayCount;
   $("s3").textContent = streak;
   $("s4").textContent = photos;
-
-  if ($("streakMsg")) {
-    $("streakMsg").textContent =
-      streak === 0 ? "Indha naal start pannunga ✍️" :
-      streak < 3  ? "Nalla start! தொடருங்க 🙂" :
-      streak < 7  ? `${streak} நாள் தொடர்ச்சி — சூப்பர்! 🔥` :
-                     `${streak} நாள் streak — semma consistency! 🏆`;
-  }
 }
-
-/* =====================================================
-   DAILY REMINDER (PWA Notification API)
-===================================================== */
-function reminderSettings() {
-  return {
-    enabled: localStorage.getItem("remEnabled") === "1",
-    time: localStorage.getItem("remTime") || "20:00"
-  };
-}
-
-function saveReminderSettings(enabled, time) {
-  localStorage.setItem("remEnabled", enabled ? "1" : "0");
-  localStorage.setItem("remTime", time);
-}
-
-function reminderStatusText() {
-  if (!("Notification" in window)) {
-    return "Indha browser notification support pannala.";
-  }
-  const { enabled, time } = reminderSettings();
-  if (!enabled) return "Reminder off pannirukku.";
-  if (Notification.permission === "denied") {
-    return "Notification permission block aagirukku. Browser site settings-la Allow pannunga.";
-  }
-  if (Notification.permission !== "granted") {
-    return "Notification permission innum kudukala. Toggle-a ON pannunga.";
-  }
-  if (!location.protocol.startsWith("https") && location.hostname !== "localhost") {
-    return "Notification vela seiya HTTPS venum (http-la vேலை seiyaadhu).";
-  }
-  return `Every day ${time}-ku reminder varum. (Test button vechi ippove check pannalam.)`;
-}
-
-function renderReminderUI() {
-  if (!$("remOn")) return;
-  const { enabled, time } = reminderSettings();
-  $("remOn").checked = enabled;
-  $("remTime").value = time;
-  $("remStatus").textContent = reminderStatusText();
-}
-
-/* Wait for the service worker to be ready to receive showNotification
-   calls. Uses the registration promise captured at page-load, with a
-   generous timeout so a slow mobile network doesn't fail this early. */
-async function getReadyRegistration() {
-  if (!("serviceWorker" in navigator)) return null;
-
-  try {
-    if (swRegistrationPromise) await swRegistrationPromise;
-
-    return await Promise.race([
-      navigator.serviceWorker.ready,
-      new Promise((_, reject) => setTimeout(() => reject(new Error("sw-timeout")), 8000))
-    ]);
-  } catch (_) {
-    return null;
-  }
-}
-
-/* Actually show a notification - tries the service worker first
-   (works even if the tab/app is backgrounded), then falls back to
-   a plain Notification, and reports back whether it truly fired so
-   the "Test now" button can tell the person the real result. */
-async function fireReminderNotification(body, tag) {
-  const title = "📔 Cool Diary";
-  const options = {
-    body: body || "Indha naal nadanadhu ellam oru entry-aa eluthunga ✍️",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
-    tag: tag || "cool-diary-daily-reminder"
-  };
-
-  if (!("Notification" in window)) {
-    return { ok: false, reason: "Indha browser/device-la Notification API support pannala." };
-  }
-
-  if (Notification.permission !== "granted") {
-    return { ok: false, reason: "Permission granted illa." };
-  }
-
-  const reg = await getReadyRegistration();
-
-  if (reg) {
-    /* Mobile browsers (Android Chrome included) REQUIRE this path once
-       a service worker controls the page - "new Notification()" throws
-       "Illegal constructor" there. So whenever a service worker is
-       available, always use it and never fall through to the raw
-       constructor below. */
-    try {
-      await reg.showNotification(title, options);
-      return { ok: true };
-    } catch (error) {
-      console.warn("showNotification failed:", error);
-      return {
-        ok: false,
-        reason: "Notification anupa mudiyala. App-a fully close pannitu thirumba open pannunga (service worker refresh aagum)."
-      };
-    }
-  }
-
-  /* No service worker at all (very old/unsupported browser) - only
-     here is the raw constructor safe to use. */
-  try {
-    new Notification(title, options);
-    return { ok: true };
-  } catch (error) {
-    console.warn("Notification() failed:", error);
-    return {
-      ok: false,
-      reason: "Notification service ippo ready illa. Konja neram kaathu app-a refresh pannitu try pannunga."
-    };
-  }
-}
-
-async function onReminderToggle() {
-  const wantsOn = $("remOn").checked;
-
-  if (!wantsOn) {
-    saveReminderSettings(false, $("remTime").value);
-    $("remStatus").textContent = reminderStatusText();
-    return;
-  }
-
-  if (!("Notification" in window)) {
-    $("remOn").checked = false;
-    $("remStatus").textContent = "Indha browser/device-la Notification API support pannala.";
-    return;
-  }
-
-  let permission = Notification.permission;
-  if (permission === "default") {
-    permission = await Notification.requestPermission();
-  }
-
-  if (permission !== "granted") {
-    $("remOn").checked = false;
-    saveReminderSettings(false, $("remTime").value);
-    $("remStatus").textContent = "Permission kudukalaina reminder work aagadhu.";
-    return;
-  }
-
-  saveReminderSettings(true, $("remTime").value);
-  $("remStatus").textContent = reminderStatusText();
-
-  /* Immediate proof it's working - don't make them wait till the set time. */
-  const result = await fireReminderNotification(
-    "Reminder ON aachu! Every day intha time-ku ninaivu varum ✅",
-    "cool-diary-reminder-confirm"
-  );
-  if (!result.ok) {
-    $("remStatus").textContent = result.reason || reminderStatusText();
-  }
-
-  checkDailyReminder();
-}
-
-function onReminderTimeChange() {
-  saveReminderSettings($("remOn").checked, $("remTime").value);
-  $("remStatus").textContent = reminderStatusText();
-}
-
-async function onReminderTest() {
-  if (!("Notification" in window)) {
-    $("remStatus").textContent = "Indha browser/device-la Notification API support pannala.";
-    return;
-  }
-
-  let permission = Notification.permission;
-  if (permission === "default") {
-    permission = await Notification.requestPermission();
-  }
-
-  if (permission !== "granted") {
-    $("remStatus").textContent = "Permission illama test notification anupa mudiyadhu. Site settings-la Allow pannunga.";
-    return;
-  }
-
-  const result = await fireReminderNotification(
-    "Idhu test notification - reminder set-up correct-ah irukku 👍",
-    "cool-diary-reminder-test"
-  );
-
-  $("remStatus").textContent = result.ok
-    ? "Test notification anupirukken - varutha check pannunga!"
-    : (result.reason || "Test notification fail aachu.");
-}
-
-function checkDailyReminder() {
-  const { enabled, time } = reminderSettings();
-  if (!enabled) return;
-  if (!("Notification" in window) || Notification.permission !== "granted") return;
-
-  const now = new Date();
-  const todayKey = dateKey(now);
-  const [h, m] = (time || "20:00").split(":").map(Number);
-
-  const reminderMoment = new Date(now);
-  reminderMoment.setHours(h || 0, m || 0, 0, 0);
-
-  if (now < reminderMoment) return;
-
-  const wroteToday = E.some(e => dateKey(e.createdAt || e.updatedAt) === todayKey);
-  if (wroteToday) return;
-
-  if (localStorage.getItem("remLastFired") === todayKey) return;
-
-  localStorage.setItem("remLastFired", todayKey);
-  fireReminderNotification();
-}
-
-if ($("remOn")) $("remOn").addEventListener("change", onReminderToggle);
-if ($("remTime")) $("remTime").addEventListener("change", onReminderTimeChange);
-if ($("remTestBtn")) $("remTestBtn").addEventListener("click", onReminderTest);
-
-/* Background poll (works while the tab is open, foreground or not,
-   as long as the OS hasn't fully suspended the tab) ... */
-setInterval(checkDailyReminder, 20000);
-
-/* ...plus an immediate re-check every time the app becomes visible
-   or regains focus again. Mobile browsers throttle/pause JS timers
-   when a tab is backgrounded or the screen locks, so this is what
-   actually catches "reminder time passed while I wasn't looking" -
-   the moment they reopen the app, it fires right away. */
-document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") checkDailyReminder();
-});
-window.addEventListener("focus", checkDailyReminder);
-window.addEventListener("pageshow", checkDailyReminder);
 
 function updateDashboard() {
   $("greeting").textContent = `${greeting()}, ${(U && U.name) || "friend"} 👋`;
   updateStats();
   fillProfile();
-  renderReminderUI();
-  checkDailyReminder();
 }
 
 /* =====================================================
@@ -3564,16 +3392,15 @@ function createDictationRecognition(lang) {
   recognition.onend = () => {
     if (dictRec === recognition) dictRec = null;
 
-    if (!dictActive || dictRestarting) {
-      if (!dictActive) resetDictationButton();
-      return;
-    }
-
-    dictRestarting = true;
-    setTimeout(() => {
+    /* Dictation also stays manual: if the browser ends recognition,
+       it does not silently turn the microphone back on. */
+    if (dictActive) {
+      dictActive = false;
       dictRestarting = false;
-      if (dictActive) createDictationRecognition(lang);
-    }, 250);
+      resetDictationButton();
+      dictButton = null;
+      dictTarget = null;
+    }
   };
 
   try {
@@ -3779,7 +3606,7 @@ $("imageModal").onclick = event => {
 };
 
 /* =====================================================
-   BACKUP
+   BACKUP + REPORTS
 ===================================================== */
 $("exportBtn").onclick = () => {
   const backup = {
@@ -3797,18 +3624,298 @@ $("exportBtn").onclick = () => {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 };
 
+$("reportsBtn").onclick = () => {
+  $("reportsModal").classList.remove("hidden");
+};
+
+$("closeReports").onclick = () => {
+  $("reportsModal").classList.add("hidden");
+};
+
+$("reportsModal").onclick = event => {
+  if (event.target === $("reportsModal")) {
+    $("reportsModal").classList.add("hidden");
+  }
+};
+
+function reportTypeLabel(type) {
+  if (type === "message") return "Message";
+  if (type === "activity") return "Activity";
+  return "Diary";
+}
+
+function reportSafe(value) {
+  return escapeHTML(value == null ? "" : value);
+}
+
+function reportDate(value) {
+  if (!value) return "—";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : date.toLocaleString("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short"
+      });
+}
+
+function buildReportHTML() {
+  const entries = Array.isArray(E) ? E : [];
+  const photoCount = entries.reduce(
+    (sum, entry) => sum + ((entry.photos || []).length),
+    0
+  );
+
+  const diaryCount = entries.filter(x => (x.type || "diary") === "diary").length;
+  const messageCount = entries.filter(x => x.type === "message").length;
+  const activityCount = entries.filter(x => x.type === "activity").length;
+
+  const entryRows = entries.length
+    ? entries.map((entry, index) => {
+        const tags = (entry.tags || []).length
+          ? entry.tags.map(tag => `<span class="tag">${reportSafe(tag)}</span>`).join(" ")
+          : "—";
+
+        const photos = (entry.photos || []).length
+          ? `<div class="photo-note">${entry.photos.length} photo(s) attached</div>`
+          : "";
+
+        return `
+          <section class="entry-card">
+            <div class="entry-number">ENTRY ${String(index + 1).padStart(2, "0")} · ${reportSafe(reportTypeLabel(entry.type || "diary"))}</div>
+            <h2>${reportSafe(entry.title || "Untitled")}</h2>
+            <div class="meta">${reportSafe(reportDate(entry.createdAt || entry.updatedAt))}${entry.mood ? ` · Mood: ${reportSafe(entry.mood)}` : ""}${entry.pinned ? " · Pinned" : ""}</div>
+            <div class="body">${reportSafe(entry.text || "").replace(/\n/g, "<br>") || "<em>No text</em>"}</div>
+            <div class="tags">${tags}</div>
+            ${photos}
+          </section>
+        `;
+      }).join("")
+    : `<section class="empty-report">No saved entries found.</section>`;
+
+  return `
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Cool Diary — Personal Report</title>
+<style>
+  @page { size:A4; margin:16mm 15mm; }
+  * { box-sizing:border-box; }
+  body {
+    margin:0;
+    background:#f4f7f9;
+    color:#17232f;
+    font-family:Arial,Helvetica,sans-serif;
+    line-height:1.55;
+  }
+  .page {
+    width:min(900px,100%);
+    margin:0 auto;
+    padding:32px 22px 50px;
+  }
+  .cover {
+    background:linear-gradient(135deg,#102331,#0fa3b1);
+    color:white;
+    border-radius:22px;
+    padding:32px;
+    margin-bottom:20px;
+  }
+  .eyebrow {
+    font-size:11px;
+    letter-spacing:2px;
+    text-transform:uppercase;
+    opacity:.78;
+    font-weight:700;
+  }
+  h1 { margin:8px 0 4px; font-size:34px; }
+  .subtitle { margin:0; opacity:.85; }
+  .generated { margin-top:20px; font-size:12px; opacity:.75; }
+  .section-title {
+    margin:24px 0 10px;
+    font-size:18px;
+    color:#102331;
+  }
+  .profile, .summary {
+    background:white;
+    border:1px solid #dce5ea;
+    border-radius:16px;
+    padding:17px;
+    margin-bottom:14px;
+  }
+  .profile-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px 24px;
+  }
+  .label {
+    color:#6b7b87;
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    font-weight:700;
+  }
+  .value { font-size:14px; margin-top:2px; }
+  .stats {
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+  }
+  .stat {
+    border:1px solid #dce5ea;
+    border-radius:14px;
+    padding:14px;
+    background:#fbfcfd;
+  }
+  .stat b { display:block; font-size:23px; }
+  .stat span { color:#6b7b87; font-size:11px; }
+  .entry-card {
+    background:white;
+    border:1px solid #dce5ea;
+    border-radius:16px;
+    padding:18px;
+    margin:0 0 12px;
+    page-break-inside:avoid;
+  }
+  .entry-number {
+    color:#0f8795;
+    font-size:10px;
+    letter-spacing:1.2px;
+    font-weight:800;
+  }
+  .entry-card h2 { margin:5px 0 3px; font-size:19px; }
+  .meta { color:#71818d; font-size:11px; margin-bottom:12px; }
+  .body { font-size:13px; white-space:normal; }
+  .tags { margin-top:12px; }
+  .tag {
+    display:inline-block;
+    background:#eef5f6;
+    border-radius:999px;
+    padding:4px 8px;
+    margin:2px;
+    font-size:10px;
+  }
+  .photo-note { margin-top:10px; color:#71818d; font-size:10px; }
+  .empty-report {
+    background:white;
+    border:1px dashed #c9d5dc;
+    border-radius:16px;
+    padding:30px;
+    text-align:center;
+    color:#71818d;
+  }
+  .footer {
+    border-top:1px solid #dce5ea;
+    margin-top:24px;
+    padding-top:12px;
+    color:#71818d;
+    font-size:10px;
+    text-align:center;
+  }
+  @media(max-width:650px) {
+    .profile-grid,.stats { grid-template-columns:1fr 1fr; }
+  }
+  @media print {
+    body { background:white; }
+    .page { width:100%; padding:0; }
+    .cover,.profile,.summary,.entry-card { box-shadow:none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="cover">
+    <div class="eyebrow">Private Personal Archive</div>
+    <h1>Cool Diary</h1>
+    <p class="subtitle">Personal Memory & Journal Report</p>
+    <div class="generated">Generated ${reportSafe(reportDate(new Date().toISOString()))}</div>
+  </header>
+
+  <h2 class="section-title">Profile</h2>
+  <section class="profile">
+    <div class="profile-grid">
+      <div><div class="label">Name</div><div class="value">${reportSafe(U?.name || "—")}</div></div>
+      <div><div class="label">Email</div><div class="value">${reportSafe(U?.email || "—")}</div></div>
+      <div><div class="label">Age</div><div class="value">${reportSafe(U?.age || "—")}</div></div>
+      <div><div class="label">Phone</div><div class="value">${reportSafe(U?.phone || "—")}</div></div>
+      <div style="grid-column:1/-1"><div class="label">Bio</div><div class="value">${reportSafe(U?.bio || "—")}</div></div>
+    </div>
+  </section>
+
+  <h2 class="section-title">Archive Summary</h2>
+  <section class="summary">
+    <div class="stats">
+      <div class="stat"><b>${entries.length}</b><span>Total entries</span></div>
+      <div class="stat"><b>${diaryCount}</b><span>Diary</span></div>
+      <div class="stat"><b>${messageCount}</b><span>Messages</span></div>
+      <div class="stat"><b>${activityCount}</b><span>Activities</span></div>
+    </div>
+    <div style="margin-top:10px;color:#6b7b87;font-size:11px">Photos attached: ${photoCount}</div>
+  </section>
+
+  <h2 class="section-title">Saved Entries</h2>
+  ${entryRows}
+
+  <div class="footer">Cool Diary · Private Personal Archive · Generated from your saved account data</div>
+</div>
+</body>
+</html>`;
+}
+
+function downloadWordReport() {
+  if (!E.length) {
+    if (!confirm("No saved entries irukku. Profile + empty report download pannalama?")) return;
+  }
+
+  const report = buildReportHTML();
+  const wordHtml = "\ufeff" + report;
+  const blob = new Blob([wordHtml], { type: "application/msword" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `cool-diary-report-${new Date().toISOString().slice(0,10)}.doc`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  $("reportsModal").classList.add("hidden");
+  toast("Word report downloaded ✅");
+}
+
+function downloadPdfReport() {
+  if (!E.length) {
+    if (!confirm("No saved entries irukku. Profile + empty report PDF create pannalama?")) return;
+  }
+
+  const report = buildReportHTML();
+  const reportWindow = window.open("", "_blank", "width=1000,height=800");
+
+  if (!reportWindow) {
+    alert("PDF report open aagala. Browser popup blocker-la this site-ku popups Allow pannunga.");
+    return;
+  }
+
+  reportWindow.document.open();
+  reportWindow.document.write(report);
+  reportWindow.document.close();
+
+  reportWindow.onload = () => {
+    setTimeout(() => {
+      reportWindow.focus();
+      reportWindow.print();
+    }, 350);
+  };
+
+  $("reportsModal").classList.add("hidden");
+}
+
+$("downloadWord").onclick = downloadWordReport;
+$("downloadPdf").onclick = downloadPdfReport;
+
 /* =====================================================
-   VOICE LOCK / WAKE FLOW
-
-   Flow:
-   LOCKED  -> listens for "hey" -> listens for wake phrase -> opens diary
-   OPEN    -> listens for "hey" -> listens for "lock" -> locks diary
-
-   Browser limitation:
-   The browser microphone must remain in a listening/standby state to
-   detect the word "hey". It cannot be physically OFF and still hear it.
-   The recognition is stopped/restarted between each stage so only the
-   required command is acted on.
+   VOICE LOCK — MANUAL ONLY
+   Microphone NEVER starts automatically.
+   User must click the mic button to turn it ON.
 ===================================================== */
 function normalizeVoice(text) {
   return String(text || "")
@@ -3828,14 +3935,13 @@ function voiceText(event) {
     .join(" ");
 }
 
-function setListeningText(text = "Listening for hey...") {
+function setListeningText(text = "Mic is OFF. Tap 🎙️ to turn it ON.") {
   if ($("lockMsg")) $("lockMsg").textContent = text;
 }
 
 function stopVoice() {
   voiceListening = false;
   voiceMode = null;
-  voiceStage = null;
   restartingVoice = false;
 
   try {
@@ -3848,25 +3954,26 @@ function stopVoice() {
 
   voiceRec = null;
   $("micBtn")?.classList.remove("listening", "on");
+  if ($("micBtn")) $("micBtn").textContent = "🎙️";
 }
 
-/* Start a recognition SESSION ("unlock" or "lock"). Unlike before, the
-   mic is NOT stopped/restarted when moving from "hey" to the actual
-   command inside the same session - that used to make the mic
-   indicator blink on/off constantly. We only stop+restart when the
-   recognition service itself disconnects (onend/onerror), and even
-   then with a backoff so quick repeated no-speech timeouts (common
-   on Android Chrome) don't cause rapid flicker. */
-function startVoiceStage(session) {
+function startVoiceStage(mode) {
   if (!SR || !T) return;
 
   if (voiceRec) stopVoice();
 
-  voiceMode = session;
-  voiceStage = "hey";
+  voiceMode = mode;
   voiceListening = true;
 
-  setListeningText("Listening for hey...");
+  if (mode === "hey-unlock") {
+    setListeningText("Mic ON — listening for hey...");
+  } else if (mode === "wake-unlock") {
+    setListeningText("Hey detected. Say your wake phrase...");
+  } else if (mode === "hey-lock") {
+    setListeningText("Mic ON — listening for hey...");
+  } else if (mode === "lock-command") {
+    setListeningText("Hey detected. Say lock...");
+  }
 
   const recognition = new SR();
   voiceRec = recognition;
@@ -3875,106 +3982,99 @@ function startVoiceStage(session) {
   recognition.interimResults = true;
   recognition.maxAlternatives = 3;
 
+  if ($("micBtn")) {
+    $("micBtn").classList.add("listening", "on");
+    $("micBtn").textContent = "⏹️";
+  }
+
   recognition.onresult = event => {
     const text = normalizeVoice(voiceText(event));
     if (!text || voiceRec !== recognition) return;
 
-    if (voiceStage === "hey") {
+    if (mode === "hey-unlock") {
       if (text.includes("hey")) {
-        voiceStage = "command";
-        setListeningText(
-          session === "unlock"
-            ? "Hey detected. Say your wake phrase..."
-            : "Hey detected. Say lock..."
-        );
+        startVoiceStage("wake-unlock");
       }
       return;
     }
 
-    if (session === "unlock") {
+    if (mode === "wake-unlock") {
       const wake = wakePhrase();
       if (wake && text.includes(wake)) {
         openDiary();
       }
-    } else {
-      if (text.includes("lock")) {
-        lockDiary();
+      return;
+    }
+
+    if (mode === "hey-lock") {
+      if (text.includes("hey")) {
+        startVoiceStage("lock-command");
       }
+      return;
+    }
+
+    if (mode === "lock-command" && text.includes("lock")) {
+      lockDiary();
     }
   };
 
   recognition.onend = () => {
     if (voiceRec === recognition) voiceRec = null;
 
-    if (voiceListening && voiceMode === session) {
-      /* A clean end right after reaching "command" stage (or the
-         browser's normal periodic no-speech cutoff) is expected and
-         quiet - restart without alarming logs. */
-      restartVoiceStage(session, true);
+    /* IMPORTANT: never restart automatically. */
+    if (voiceListening && voiceMode === mode) {
+      voiceListening = false;
+      voiceMode = null;
+      restartingVoice = false;
+      $("micBtn")?.classList.remove("listening", "on");
+      if ($("micBtn")) $("micBtn").textContent = "🎙️";
+      setListeningText("Mic OFF. Tap 🎙️ to turn it ON again.");
     }
   };
 
   recognition.onerror = event => {
+    console.warn("Voice error:", event.error);
+
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       voiceListening = false;
       voiceMode = null;
+      $("micBtn")?.classList.remove("listening", "on");
+      if ($("micBtn")) $("micBtn").textContent = "🎙️";
       $("lockMsg").textContent = "Microphone permission Allow pannunga.";
       return;
     }
 
-    /* "no-speech" / "aborted" are routine on mobile browsers - don't
-       spam the console or reset the backoff timer for these. */
-    const routine = event.error === "no-speech" || event.error === "aborted";
-    if (!routine) console.warn("Voice error:", event.error);
+    if (event.error === "aborted") return;
 
-    if (voiceListening && voiceMode === session) {
-      restartVoiceStage(session, routine);
-    }
+    /* No automatic restart — user must click the mic again. */
+    voiceListening = false;
+    voiceMode = null;
+    $("micBtn")?.classList.remove("listening", "on");
+    if ($("micBtn")) $("micBtn").textContent = "🎙️";
+    setListeningText("Mic OFF. Tap 🎙️ to turn it ON again.");
   };
 
   try {
     recognition.start();
   } catch (error) {
     console.warn("Voice start:", error);
-    restartVoiceStage(session, false);
+    stopVoice();
+    setListeningText("Mic OFF. Tap 🎙️ to try again.");
   }
 }
 
-function restartVoiceStage(session, routine = false) {
-  if (!voiceListening || restartingVoice || voiceMode !== session) return;
-  if (session === "unlock" && unlocked) return;
-  if (session === "lock" && !unlocked) return;
-
-  /* Backoff: routine (expected) stops restart quickly to keep the
-     mic session near-continuous; anything unexpected backs off
-     progressively so a broken mic doesn't spam getUserMedia. */
-  voiceRestartDelay = routine ? 400 : Math.min(voiceRestartDelay + 500, 4000);
-
-  restartingVoice = true;
-  setTimeout(() => {
-    restartingVoice = false;
-    if (voiceListening && voiceMode === session) {
-      startVoiceStage(session);
-    }
-  }, voiceRestartDelay);
-}
-
-/* Begin the locked-screen flow: hey -> wake phrase. */
 function startVoice() {
   if (!SR || !T || unlocked) return;
   if (dictActive) stopDictation();
   if (voiceListening) return;
-  voiceRestartDelay = 700;
-  startVoiceStage("unlock");
+  startVoiceStage("hey-unlock");
 }
 
-/* Begin the unlocked-screen flow: hey -> lock. */
 function startLockVoice() {
   if (!SR || !T || !unlocked) return;
   if (dictActive) stopDictation();
   if (voiceListening) return;
-  voiceRestartDelay = 700;
-  startVoiceStage("lock");
+  startVoiceStage("hey-lock");
 }
 
 function openDiary() {
@@ -3983,11 +4083,6 @@ function openDiary() {
   showPage("app");
   updateDashboard();
   renderEntries();
-
-  /* After opening, wait for: hey -> lock. */
-  setTimeout(() => {
-    if (unlocked && T) startLockVoice();
-  }, 500);
 }
 
 function lockDiary() {
@@ -3998,23 +4093,18 @@ function lockDiary() {
   unlocked = false;
   showPage("lock");
   $("typed").value = "";
-  setListeningText("Listening for hey...");
-
-  /* After locking, wait for: hey -> wake phrase. */
-  setTimeout(() => {
-    if (!unlocked && T) startVoice();
-  }, 400);
+  setListeningText("Mic is OFF. Tap 🎙️ to turn it ON.");
 }
 
 $("lockBtn").onclick = lockDiary;
 
-/* Manual fallback on the lock screen. */
+/* Manual microphone control — the ONLY way the voice lock mic starts. */
 $("micBtn").onclick = () => {
   if (unlocked) return;
 
   if (voiceListening) {
     stopVoice();
-    $("lockMsg").textContent = "Mic stopped. Tap 🎙️ to start again.";
+    $("lockMsg").textContent = "Mic OFF. Tap 🎙️ to turn it ON again.";
   } else {
     startVoice();
   }
@@ -4056,7 +4146,7 @@ async function start() {
       openDiary();
     } else {
       showPage("lock");
-      startVoice("unlock");
+      setListeningText("Mic is OFF. Tap 🎙️ to turn it ON.");
     }
   } catch (error) {
     console.error("START ERROR:", error);
@@ -4079,9 +4169,10 @@ updateAuthUI();
 setType("diary");
 
 if (T) {
-  /* Existing login: always require voice wake phrase. */
+  /* Existing login: mic stays OFF until the user clicks it. */
   unlocked = false;
   showPage("lock");
+  setListeningText("Mic is OFF. Tap 🎙️ to turn it ON.");
   start();
 } else {
   showPage("auth");
@@ -4090,9 +4181,8 @@ if (T) {
 /* Register service worker for PWA install support (safe no-op for API calls). */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    swRegistrationPromise = navigator.serviceWorker.register("/sw.js").catch((err) => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
       console.warn("SW registration failed:", err);
-      return null;
     });
   });
 }
