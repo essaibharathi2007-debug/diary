@@ -1570,13 +1570,6 @@ textarea{
     </button>
 
     <button
-      class="ghost"
-      id="reportBtn"
-    >
-      📄 Report
-    </button>
-
-    <button
       class="danger"
       id="logoutBtn"
     >
@@ -1624,12 +1617,38 @@ textarea{
   <div class="stat">
     <b id="s3">0</b>
     <span>Day streak</span>
+    <div id="streakMsg" style="font-size:11px;color:var(--mut);margin-top:4px;"></div>
   </div>
 
   <div class="stat">
     <b id="s4">0</b>
     <span>Photos</span>
   </div>
+
+</section>
+
+
+<!-- =====================================================
+     DAILY REMINDER
+===================================================== -->
+
+<section class="card" id="reminderCard">
+
+  <div class="card-title">
+    <h3>🔔 Daily reminder</h3>
+  </div>
+
+  <div class="field" style="display:flex;align-items:center;gap:10px;">
+    <input type="checkbox" id="remOn" style="width:18px;height:18px;margin:0;">
+    <label for="remOn" style="margin:0;">Every day diary எழுத reminder venuma?</label>
+  </div>
+
+  <div class="field">
+    <label>Reminder time</label>
+    <input type="time" id="remTime" value="20:00">
+  </div>
+
+  <p id="remStatus" style="color:var(--mut);font-size:13px;margin:8px 0 0;"></p>
 
 </section>
 
@@ -2981,12 +3000,132 @@ function updateStats() {
   $("s2").textContent = todayCount;
   $("s3").textContent = streak;
   $("s4").textContent = photos;
+
+  if ($("streakMsg")) {
+    $("streakMsg").textContent =
+      streak === 0 ? "Indha naal start pannunga ✍️" :
+      streak < 3  ? "Nalla start! தொடருங்க 🙂" :
+      streak < 7  ? `${streak} நாள் தொடர்ச்சி — சூப்பர்! 🔥` :
+                     `${streak} நாள் streak — semma consistency! 🏆`;
+  }
 }
+
+/* =====================================================
+   DAILY REMINDER (PWA Notification API)
+===================================================== */
+function reminderSettings() {
+  return {
+    enabled: localStorage.getItem("remEnabled") === "1",
+    time: localStorage.getItem("remTime") || "20:00"
+  };
+}
+
+function saveReminderSettings(enabled, time) {
+  localStorage.setItem("remEnabled", enabled ? "1" : "0");
+  localStorage.setItem("remTime", time);
+}
+
+function reminderStatusText() {
+  if (!("Notification" in window)) {
+    return "Indha browser notification support pannala.";
+  }
+  const { enabled, time } = reminderSettings();
+  if (!enabled) return "Reminder off pannirukku.";
+  if (Notification.permission === "denied") {
+    return "Notification permission block aagirukku. Browser settings-la allow pannunga.";
+  }
+  return `Every day ${time}-ku reminder varum.`;
+}
+
+function renderReminderUI() {
+  if (!$("remOn")) return;
+  const { enabled, time } = reminderSettings();
+  $("remOn").checked = enabled;
+  $("remTime").value = time;
+  $("remStatus").textContent = reminderStatusText();
+}
+
+async function onReminderToggle() {
+  const wantsOn = $("remOn").checked;
+
+  if (wantsOn && "Notification" in window && Notification.permission === "default") {
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") {
+      $("remOn").checked = false;
+      saveReminderSettings(false, $("remTime").value);
+      $("remStatus").textContent = "Permission kudukalaina reminder work aagadhu.";
+      return;
+    }
+  }
+
+  saveReminderSettings(wantsOn, $("remTime").value);
+  $("remStatus").textContent = reminderStatusText();
+
+  if (wantsOn) checkDailyReminder();
+}
+
+function onReminderTimeChange() {
+  saveReminderSettings($("remOn").checked, $("remTime").value);
+  $("remStatus").textContent = reminderStatusText();
+}
+
+async function fireReminderNotification() {
+  const title = "📔 Cool Diary";
+  const options = {
+    body: "Indha naal nadanadhu ellam oru entry-aa eluthunga ✍️",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: "cool-diary-daily-reminder"
+  };
+
+  try {
+    if ("serviceWorker" in navigator) {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.showNotification(title, options);
+        return;
+      }
+    }
+    new Notification(title, options);
+  } catch (error) {
+    console.warn("Reminder notification failed:", error);
+  }
+}
+
+function checkDailyReminder() {
+  const { enabled, time } = reminderSettings();
+  if (!enabled) return;
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+  const now = new Date();
+  const todayKey = dateKey(now);
+  const [h, m] = (time || "20:00").split(":").map(Number);
+
+  const reminderMoment = new Date(now);
+  reminderMoment.setHours(h || 0, m || 0, 0, 0);
+
+  if (now < reminderMoment) return;
+
+  const wroteToday = E.some(e => dateKey(e.createdAt || e.updatedAt) === todayKey);
+  if (wroteToday) return;
+
+  if (localStorage.getItem("remLastFired") === todayKey) return;
+
+  localStorage.setItem("remLastFired", todayKey);
+  fireReminderNotification();
+}
+
+if ($("remOn")) $("remOn").addEventListener("change", onReminderToggle);
+if ($("remTime")) $("remTime").addEventListener("change", onReminderTimeChange);
+
+setInterval(checkDailyReminder, 60000);
 
 function updateDashboard() {
   $("greeting").textContent = `${greeting()}, ${(U && U.name) || "friend"} 👋`;
   updateStats();
   fillProfile();
+  renderReminderUI();
+  checkDailyReminder();
 }
 
 /* =====================================================
@@ -3530,165 +3669,6 @@ $("exportBtn").onclick = () => {
   link.download = "cool-diary-backup.json";
   link.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-};
-
-/* =====================================================
-   REPORT (readable, printable document from profile + entries)
-===================================================== */
-$("reportBtn").onclick = () => {
-  const profile = U;
-  const entries = Array.isArray(E) ? [...E] : [];
-
-  entries.sort((a, b) => new Date(a.createdAt || 0) - new Date(b.createdAt || 0));
-
-  const esc = (s) => (s === null || s === undefined) ? "" :
-    String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-
-  const fmtDate = (iso) => {
-    const d = new Date(iso);
-    return isNaN(d) ? "—" : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
-  };
-  const fmtDateTime = (iso) => {
-    const d = new Date(iso);
-    return isNaN(d) ? "—" : d.toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" }) +
-      " · " + d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
-  };
-  const monthKey = (iso) => {
-    const d = new Date(iso);
-    return isNaN(d) ? "Undated" : d.toLocaleDateString(undefined, { month: "long", year: "numeric" });
-  };
-  const initials = (name) => {
-    if (!name) return "?";
-    return name.trim().split(/\s+/).slice(0, 2).map(w => w[0].toUpperCase()).join("");
-  };
-
-  const counts = { diary: 0, message: 0, activity: 0, pinned: 0 };
-  entries.forEach(e => {
-    if (counts[e.type] !== undefined) counts[e.type]++;
-    if (e.pinned) counts.pinned++;
-  });
-
-  let entriesHtml = "";
-  if (!entries.length) {
-    entriesHtml = `<div class="no-entries">No diary entries yet.</div>`;
-  } else {
-    let lastMonth = null;
-    entries.forEach(entry => {
-      const mk = monthKey(entry.createdAt);
-      if (mk !== lastMonth) { entriesHtml += `<div class="month">${esc(mk)}</div>`; lastMonth = mk; }
-
-      const photos = Array.isArray(entry.photos) && entry.photos.length
-        ? `<div class="photos">${entry.photos.map(p => `<a href="${esc(p)}" target="_blank" rel="noopener"><img src="${esc(p)}"></a>`).join("")}</div>` : "";
-      const tags = Array.isArray(entry.tags) && entry.tags.length
-        ? entry.tags.map(t => `<span class="tag">#${esc(t)}</span>`).join("") : "";
-      const mood = entry.mood ? `<span class="mood">${esc(entry.mood)}</span>` : "";
-
-      entriesHtml += `
-        <div class="entry">
-          <div class="entry-head">
-            <span class="date">${fmtDateTime(entry.createdAt)}</span>
-            <span class="badge ${esc(entry.type || "diary")}">${esc(entry.type || "diary")}</span>
-            ${entry.pinned ? '<span class="pin">★ Pinned</span>' : ""}
-          </div>
-          ${entry.title ? `<div class="title">${esc(entry.title)}</div>` : ""}
-          ${entry.text ? `<p class="text">${esc(entry.text)}</p>` : ""}
-          ${photos}
-          <div class="foot">${mood}${tags}</div>
-        </div>`;
-    });
-  }
-
-  const avatarHtml = profile && profile.avatar
-    ? `<img class="avatar" src="${esc(profile.avatar)}">`
-    : `<div class="avatar fallback">${esc(initials(profile && profile.name))}</div>`;
-
-  const reportHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>${esc(profile && profile.name) || "Cool Diary"} — Report</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;1,400&family=Source+Sans+3:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --paper:#F7F2E9; --paper-2:#FBF8F2; --ink:#242220; --ink-soft:#5B564E;
-    --rule:#E1D8C4; --teal:#2F6A66; --teal-deep:#1F4744; --rose:#B85C5C;
-    --gold:#B08A3E; --chip-bg:#EFE7D4;
-  }
-  *{box-sizing:border-box;}
-  body{margin:0;background:#EDE6D6;color:var(--ink);font-family:'Source Sans 3',system-ui,sans-serif;line-height:1.5;}
-  .sheet{max-width:760px;margin:32px auto 80px;background:var(--paper);box-shadow:0 8px 30px rgba(31,71,68,.18);}
-  .cover{background:linear-gradient(180deg,var(--teal-deep),var(--teal));color:#F4EFE3;padding:38px 40px 30px;display:flex;gap:22px;align-items:center;}
-  .avatar{width:78px;height:78px;border-radius:50%;object-fit:cover;flex:none;border:2px solid rgba(244,239,227,.55);background:rgba(244,239,227,.15);}
-  .avatar.fallback{display:flex;align-items:center;justify-content:center;font-family:'Lora',serif;font-size:28px;font-weight:600;color:#F4EFE3;}
-  .cover h2{font-family:'Lora',serif;font-weight:600;font-size:27px;margin:0 0 4px;}
-  .cover .role{font-size:13.5px;color:#CFE0DD;}
-  .cover .bio{margin-top:10px;font-size:14px;color:#EAF2F0;max-width:480px;}
-  .meta-strip{display:flex;flex-wrap:wrap;background:var(--paper-2);border-bottom:1px solid var(--rule);}
-  .meta-cell{flex:1 1 140px;padding:14px 18px;border-right:1px solid var(--rule);}
-  .meta-cell .label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--gold);font-weight:600;margin-bottom:3px;}
-  .meta-cell .value{font-size:14px;color:var(--ink);word-break:break-word;}
-  .stats{display:flex;flex-wrap:wrap;gap:1px;background:var(--rule);padding:1px;}
-  .stat{flex:1 1 110px;background:var(--paper-2);padding:16px 12px;text-align:center;}
-  .stat .num{font-family:'Lora',serif;font-size:26px;font-weight:600;color:var(--teal-deep);}
-  .stat .lbl{font-size:11.5px;color:var(--ink-soft);margin-top:2px;}
-  .entries{padding:10px 40px 40px;}
-  .month{font-family:'Lora',serif;font-style:italic;font-size:15px;color:var(--gold);margin:34px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--rule);}
-  .entry{padding:18px 0;border-bottom:1px solid var(--rule);break-inside:avoid;}
-  .entry-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
-  .date{font-size:12.5px;color:var(--ink-soft);font-weight:600;}
-  .badge{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;padding:2px 8px;border-radius:20px;}
-  .badge.diary{background:#DCEAE7;color:var(--teal-deep);}
-  .badge.message{background:#F1DEDE;color:var(--rose);}
-  .badge.activity{background:#F3EAD2;color:var(--gold);}
-  .pin{font-size:12px;color:var(--rose);}
-  .title{font-family:'Lora',serif;font-weight:600;font-size:18px;margin:2px 0 6px;}
-  .text{font-size:14.5px;color:#3A362E;white-space:pre-wrap;margin:0 0 10px;}
-  .foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
-  .mood{font-size:12px;background:var(--chip-bg);color:var(--teal-deep);padding:3px 10px;border-radius:20px;font-weight:600;}
-  .tag{font-size:12px;color:var(--ink-soft);padding:3px 9px;border:1px solid var(--rule);border-radius:20px;}
-  .photos{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
-  .photos img{width:92px;height:92px;object-fit:cover;border-radius:6px;border:1px solid var(--rule);}
-  .no-entries{padding:40px 0;text-align:center;color:var(--ink-soft);font-size:14px;}
-  .toolbar{position:sticky;top:0;background:var(--teal-deep);padding:12px 20px;text-align:right;}
-  .toolbar button{font:inherit;font-size:14px;font-weight:600;border:1px solid rgba(244,239,227,.4);background:#F4EFE3;color:var(--teal-deep);padding:8px 16px;border-radius:7px;cursor:pointer;}
-  @media print{ .toolbar{display:none;} .sheet{margin:0;box-shadow:none;max-width:100%;} }
-</style>
-</head>
-<body>
-  <div class="toolbar"><button onclick="window.print()">Print / Save as PDF</button></div>
-  <div class="sheet">
-    <div class="cover">
-      ${avatarHtml}
-      <div>
-        <h2>${esc(profile && profile.name) || "Cool Diary"}</h2>
-        <div class="role">Personal diary report</div>
-        ${profile && profile.bio ? `<div class="bio">${esc(profile.bio)}</div>` : ""}
-      </div>
-    </div>
-    <div class="meta-strip">
-      ${profile && profile.email ? `<div class="meta-cell"><div class="label">Email</div><div class="value">${esc(profile.email)}</div></div>` : ""}
-      ${profile && profile.phone ? `<div class="meta-cell"><div class="label">Phone</div><div class="value">${esc(profile.phone)}</div></div>` : ""}
-      <div class="meta-cell"><div class="label">Member since</div><div class="value">${fmtDate(profile && profile.createdAt)}</div></div>
-      <div class="meta-cell"><div class="label">Report generated</div><div class="value">${fmtDate(new Date().toISOString())}</div></div>
-    </div>
-    <div class="stats">
-      <div class="stat"><div class="num">${entries.length}</div><div class="lbl">Total entries</div></div>
-      <div class="stat"><div class="num">${counts.diary}</div><div class="lbl">Diary</div></div>
-      <div class="stat"><div class="num">${counts.message}</div><div class="lbl">Messages</div></div>
-      <div class="stat"><div class="num">${counts.activity}</div><div class="lbl">Activities</div></div>
-      <div class="stat"><div class="num">${counts.pinned}</div><div class="lbl">Pinned</div></div>
-    </div>
-    <div class="entries">${entriesHtml}</div>
-  </div>
-</body>
-</html>`;
-
-  const win = window.open("", "_blank");
-  win.document.open();
-  win.document.write(reportHtml);
-  win.document.close();
 };
 
 /* =====================================================
