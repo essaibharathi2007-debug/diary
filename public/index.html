@@ -2611,7 +2611,9 @@ let selectedStatus = "Completed";
 let voiceRec = null;
 let voiceListening = false;
 let voiceMode = null;
+let voiceStage = null;
 let restartingVoice = false;
+let voiceRestartDelay = 700;
 let dictRec = null;
 let photoData = {
   diary: [],
@@ -3709,6 +3711,7 @@ function setListeningText(text = "Listening for hey...") {
 function stopVoice() {
   voiceListening = false;
   voiceMode = null;
+  voiceStage = null;
   restartingVoice = false;
 
   try {
@@ -3723,25 +3726,23 @@ function stopVoice() {
   $("micBtn")?.classList.remove("listening", "on");
 }
 
-/* Start a recognition stage.  Stages are deliberately separate:
-   hey -> wake phrase / lock command. */
-function startVoiceStage(mode) {
+/* Start a recognition SESSION ("unlock" or "lock"). Unlike before, the
+   mic is NOT stopped/restarted when moving from "hey" to the actual
+   command inside the same session - that used to make the mic
+   indicator blink on/off constantly. We only stop+restart when the
+   recognition service itself disconnects (onend/onerror), and even
+   then with a backoff so quick repeated no-speech timeouts (common
+   on Android Chrome) don't cause rapid flicker. */
+function startVoiceStage(session) {
   if (!SR || !T) return;
 
   if (voiceRec) stopVoice();
 
-  voiceMode = mode;
+  voiceMode = session;
+  voiceStage = "hey";
   voiceListening = true;
 
-  if (mode === "hey-unlock") {
-    setListeningText("Listening for hey...");
-  } else if (mode === "wake-unlock") {
-    setListeningText("Hey detected. Say your wake phrase...");
-  } else if (mode === "hey-lock") {
-    setListeningText("Listening for hey...");
-  } else if (mode === "lock-command") {
-    setListeningText("Hey detected. Say lock...");
-  }
+  setListeningText("Listening for hey...");
 
   const recognition = new SR();
   voiceRec = recognition;
@@ -3754,29 +3755,24 @@ function startVoiceStage(mode) {
     const text = normalizeVoice(voiceText(event));
     if (!text || voiceRec !== recognition) return;
 
-    if (mode === "hey-unlock") {
+    if (voiceStage === "hey") {
       if (text.includes("hey")) {
-        startVoiceStage("wake-unlock");
+        voiceStage = "command";
+        setListeningText(
+          session === "unlock"
+            ? "Hey detected. Say your wake phrase..."
+            : "Hey detected. Say lock..."
+        );
       }
       return;
     }
 
-    if (mode === "wake-unlock") {
+    if (session === "unlock") {
       const wake = wakePhrase();
       if (wake && text.includes(wake)) {
         openDiary();
       }
-      return;
-    }
-
-    if (mode === "hey-lock") {
-      if (text.includes("hey")) {
-        startVoiceStage("lock-command");
-      }
-      return;
-    }
-
-    if (mode === "lock-command") {
+    } else {
       if (text.includes("lock")) {
         lockDiary();
       }
@@ -3786,14 +3782,15 @@ function startVoiceStage(mode) {
   recognition.onend = () => {
     if (voiceRec === recognition) voiceRec = null;
 
-    if (voiceListening && voiceMode === mode) {
-      restartVoiceStage(mode);
+    if (voiceListening && voiceMode === session) {
+      /* A clean end right after reaching "command" stage (or the
+         browser's normal periodic no-speech cutoff) is expected and
+         quiet - restart without alarming logs. */
+      restartVoiceStage(session, true);
     }
   };
 
   recognition.onerror = event => {
-    console.warn("Voice error:", event.error);
-
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       voiceListening = false;
       voiceMode = null;
@@ -3801,8 +3798,13 @@ function startVoiceStage(mode) {
       return;
     }
 
-    if (voiceListening && voiceMode === mode) {
-      restartVoiceStage(mode);
+    /* "no-speech" / "aborted" are routine on mobile browsers - don't
+       spam the console or reset the backoff timer for these. */
+    const routine = event.error === "no-speech" || event.error === "aborted";
+    if (!routine) console.warn("Voice error:", event.error);
+
+    if (voiceListening && voiceMode === session) {
+      restartVoiceStage(session, routine);
     }
   };
 
@@ -3810,22 +3812,27 @@ function startVoiceStage(mode) {
     recognition.start();
   } catch (error) {
     console.warn("Voice start:", error);
-    restartVoiceStage(mode);
+    restartVoiceStage(session, false);
   }
 }
 
-function restartVoiceStage(mode) {
-  if (!voiceListening || restartingVoice || voiceMode !== mode) return;
-  if (mode.includes("unlock") && unlocked) return;
-  if (mode.includes("lock") && !unlocked) return;
+function restartVoiceStage(session, routine = false) {
+  if (!voiceListening || restartingVoice || voiceMode !== session) return;
+  if (session === "unlock" && unlocked) return;
+  if (session === "lock" && !unlocked) return;
+
+  /* Backoff: routine (expected) stops restart quickly to keep the
+     mic session near-continuous; anything unexpected backs off
+     progressively so a broken mic doesn't spam getUserMedia. */
+  voiceRestartDelay = routine ? 400 : Math.min(voiceRestartDelay + 500, 4000);
 
   restartingVoice = true;
   setTimeout(() => {
     restartingVoice = false;
-    if (voiceListening && voiceMode === mode) {
-      startVoiceStage(mode);
+    if (voiceListening && voiceMode === session) {
+      startVoiceStage(session);
     }
-  }, 700);
+  }, voiceRestartDelay);
 }
 
 /* Begin the locked-screen flow: hey -> wake phrase. */
@@ -3833,7 +3840,8 @@ function startVoice() {
   if (!SR || !T || unlocked) return;
   if (dictActive) stopDictation();
   if (voiceListening) return;
-  startVoiceStage("hey-unlock");
+  voiceRestartDelay = 700;
+  startVoiceStage("unlock");
 }
 
 /* Begin the unlocked-screen flow: hey -> lock. */
@@ -3841,7 +3849,8 @@ function startLockVoice() {
   if (!SR || !T || !unlocked) return;
   if (dictActive) stopDictation();
   if (voiceListening) return;
-  startVoiceStage("hey-lock");
+  voiceRestartDelay = 700;
+  startVoiceStage("lock");
 }
 
 function openDiary() {
