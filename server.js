@@ -5,7 +5,6 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const path = require("path");
-const crypto = require("crypto");
 const cloudinary = require("cloudinary").v2;
 
 const app = express();
@@ -39,10 +38,7 @@ app.use(
     })
 );
 
-// ======================================================
 // CORS
-// ======================================================
-
 app.use((req, res, next) => {
 
     const origin = req.headers.origin;
@@ -113,7 +109,6 @@ app.use(
 
 const User = mongoose.model(
     "User",
-
     new mongoose.Schema(
         {
             email: {
@@ -172,7 +167,6 @@ const User = mongoose.model(
 
 const Entry = mongoose.model(
     "Entry",
-
     new mongoose.Schema(
         {
             user: {
@@ -229,304 +223,73 @@ const Entry = mongoose.model(
 );
 
 // ======================================================
-// MEMORY ENCRYPTION
+// EXPENSE MODEL
 // ======================================================
 
-const DIARY_ENCRYPTION_SECRET =
-    process.env.DIARY_ENCRYPTION_KEY ||
-    process.env.JWT_SECRET;
+const Expense = mongoose.model(
+    "Expense",
+    new mongoose.Schema(
+        {
+            user: {
+                type: mongoose.Schema.Types.ObjectId,
+                required: true,
+                index: true
+            },
 
-function diaryKey() {
+            amount: {
+                type: Number,
+                required: true,
+                min: 0
+            },
 
-    return crypto
-        .createHash("sha256")
-        .update(
-            String(
-                DIARY_ENCRYPTION_SECRET || ""
-            )
-        )
-        .digest();
+            category: {
+                type: String,
+                default: "Other",
+                trim: true
+            },
 
-}
+            note: {
+                type: String,
+                default: "",
+                trim: true
+            },
 
-// ======================================================
-// DIARY TEXT ENCRYPTION
-// ======================================================
+            paymentMethod: {
+                type: String,
+                default: "Cash",
+                trim: true
+            },
 
-function encryptDiaryText(value) {
+            date: {
+                type: String,
+                required: true
+            }
+        },
 
-    const text =
-        String(
-            value ?? ""
-        );
-
-    if (!text) {
-        return text;
-    }
-
-    const iv =
-        crypto.randomBytes(12);
-
-    const cipher =
-        crypto.createCipheriv(
-            "aes-256-gcm",
-            diaryKey(),
-            iv
-        );
-
-    const encrypted =
-        Buffer.concat([
-            cipher.update(
-                text,
-                "utf8"
-            ),
-            cipher.final()
-        ]);
-
-    const tag =
-        cipher.getAuthTag();
-
-    return [
-        "CD1",
-        iv.toString("base64url"),
-        tag.toString("base64url"),
-        encrypted.toString("base64url")
-    ].join(".");
-}
-
-// ======================================================
-// DIARY TEXT DECRYPTION
-// ======================================================
-
-function decryptDiaryText(value) {
-
-    const text =
-        String(
-            value ?? ""
-        );
-
-    // Old entries remain compatible.
-    if (!text.startsWith("CD1.")) {
-        return text;
-    }
-
-    try {
-
-        const parts =
-            text.split(".");
-
-        if (parts.length !== 4) {
-            return text;
+        {
+            timestamps: true
         }
-
-        const iv =
-            Buffer.from(
-                parts[1],
-                "base64url"
-            );
-
-        const tag =
-            Buffer.from(
-                parts[2],
-                "base64url"
-            );
-
-        const encrypted =
-            Buffer.from(
-                parts[3],
-                "base64url"
-            );
-
-        const decipher =
-            crypto.createDecipheriv(
-                "aes-256-gcm",
-                diaryKey(),
-                iv
-            );
-
-        decipher.setAuthTag(tag);
-
-        return Buffer.concat([
-            decipher.update(
-                encrypted
-            ),
-            decipher.final()
-        ]).toString("utf8");
-
-    } catch (error) {
-
-        console.error(
-            "DIARY DECRYPT ERROR:",
-            error.message
-        );
-
-        return "[Encrypted memory could not be opened]";
-    }
-}
+    )
+);
 
 // ======================================================
-// ENTRY DECRYPT
+// HELPERS
 // ======================================================
 
-function decryptEntry(entry) {
+function sign(user) {
 
-    const obj =
-        entry.toObject
-            ? entry.toObject()
-            : {
-                ...entry
-            };
+    return jwt.sign(
+        {
+            id: user._id.toString()
+        },
 
-    obj.text =
-        decryptDiaryText(
-            obj.text
-        );
+        process.env.JWT_SECRET,
 
-    return obj;
-}
-
-// ======================================================
-// WAKE PHRASE ENCRYPTION
-// ======================================================
-// Example:
-//
-// User types:
-// hi cool
-//
-// MongoDB stores:
-// CD1.xxxxx.xxxxx.xxxxx
-//
-// Frontend receives:
-// hi cool
-//
-// So voice recognition continues to work.
-// ======================================================
-
-function encryptWakePhrase(value) {
-
-    const text =
-        String(
-            value ?? ""
-        ).trim();
-
-    if (!text) {
-        return text;
-    }
-
-    // Prevent double encryption.
-    if (
-        text.startsWith("CD1.")
-    ) {
-        return text;
-    }
-
-    const iv =
-        crypto.randomBytes(12);
-
-    const cipher =
-        crypto.createCipheriv(
-            "aes-256-gcm",
-            diaryKey(),
-            iv
-        );
-
-    const encrypted =
-        Buffer.concat([
-            cipher.update(
-                text,
-                "utf8"
-            ),
-            cipher.final()
-        ]);
-
-    const tag =
-        cipher.getAuthTag();
-
-    return [
-        "CD1",
-        iv.toString("base64url"),
-        tag.toString("base64url"),
-        encrypted.toString("base64url")
-    ].join(".");
-}
-
-// ======================================================
-// WAKE PHRASE DECRYPTION
-// ======================================================
-
-function decryptWakePhrase(value) {
-
-    const text =
-        String(
-            value ?? ""
-        );
-
-    // Existing users may still have plain text.
-    if (
-        !text.startsWith("CD1.")
-    ) {
-        return text;
-    }
-
-    try {
-
-        const parts =
-            text.split(".");
-
-        if (parts.length !== 4) {
-            return text;
+        {
+            expiresIn: "30d"
         }
-
-        const iv =
-            Buffer.from(
-                parts[1],
-                "base64url"
-            );
-
-        const tag =
-            Buffer.from(
-                parts[2],
-                "base64url"
-            );
-
-        const encrypted =
-            Buffer.from(
-                parts[3],
-                "base64url"
-            );
-
-        const decipher =
-            crypto.createDecipheriv(
-                "aes-256-gcm",
-                diaryKey(),
-                iv
-            );
-
-        decipher.setAuthTag(
-            tag
-        );
-
-        return Buffer.concat([
-            decipher.update(
-                encrypted
-            ),
-            decipher.final()
-        ]).toString("utf8");
-
-    } catch (error) {
-
-        console.error(
-            "WAKE PHRASE DECRYPT ERROR:",
-            error.message
-        );
-
-        return "";
-    }
+    );
 }
-
-// ======================================================
-// SAFE USER
-// ======================================================
 
 function safe(user) {
 
@@ -538,49 +301,7 @@ function safe(user) {
     return obj;
 }
 
-// ======================================================
-// SAFE USER + DECRYPTED WAKE PHRASE
-// ======================================================
-
-function safeWithDecryptedWakePhrase(user) {
-
-    const obj =
-        safe(user);
-
-    obj.wakePhrase =
-        decryptWakePhrase(
-            user.wakePhrase
-        );
-
-    return obj;
-}
-
-// ======================================================
-// HELPERS
-// ======================================================
-
-function sign(user) {
-
-    return jwt.sign(
-        {
-            id:
-                user._id.toString()
-        },
-
-        process.env.JWT_SECRET,
-
-        {
-            expiresIn:
-                "30d"
-        }
-    );
-
-}
-
-function pick(
-    obj,
-    keys
-) {
+function pick(obj, keys) {
 
     return Object.fromEntries(
 
@@ -592,6 +313,7 @@ function pick(
                         key
                     )
             )
+
             .map(
                 key => [
                     key,
@@ -605,17 +327,12 @@ function pick(
 // AUTH MIDDLEWARE
 // ======================================================
 
-function auth(
-    req,
-    res,
-    next
-) {
+function auth(req, res, next) {
 
     try {
 
         const header =
-            req.headers.authorization ||
-            "";
+            req.headers.authorization || "";
 
         if (
             !header.startsWith(
@@ -738,10 +455,13 @@ async function destroyImages(urls) {
     await Promise.all(
 
         urls
+
             .map(
                 getPublicId
             )
+
             .filter(Boolean)
+
             .map(
                 id =>
                     cloudinary
@@ -755,16 +475,13 @@ async function destroyImages(urls) {
 }
 
 // ======================================================
-// API TEST
+// TEST
 // ======================================================
 
 app.get(
     "/api/test",
 
-    (
-        req,
-        res
-    ) => {
+    (req, res) => {
 
         res.json({
 
@@ -776,8 +493,8 @@ app.get(
 
             time:
                 new Date().toISOString()
-
         });
+
     }
 );
 
@@ -796,22 +513,19 @@ app.post(
 
             const email =
                 String(
-                    req.body.email ||
-                    ""
+                    req.body.email || ""
                 )
                     .trim()
                     .toLowerCase();
 
             const password =
                 String(
-                    req.body.password ||
-                    ""
+                    req.body.password || ""
                 );
 
             const name =
                 String(
-                    req.body.name ||
-                    ""
+                    req.body.name || ""
                 ).trim();
 
             if (!name) {
@@ -877,13 +591,9 @@ app.post(
 
                     name,
 
-                    // IMPORTANT:
-                    // Wake phrase is encrypted
-                    // before MongoDB save.
                     wakePhrase:
-                        encryptWakePhrase(
-                            "hi cool"
-                        )
+                        "hi cool"
+
                 });
 
             return res.status(201).json({
@@ -898,9 +608,7 @@ app.post(
                     sign(user),
 
                 user:
-                    safeWithDecryptedWakePhrase(
-                        user
-                    )
+                    safe(user)
 
             });
 
@@ -923,16 +631,14 @@ app.post(
 
             const email =
                 String(
-                    req.body.email ||
-                    ""
+                    req.body.email || ""
                 )
                     .trim()
                     .toLowerCase();
 
             const password =
                 String(
-                    req.body.password ||
-                    ""
+                    req.body.password || ""
                 );
 
             if (!email) {
@@ -1000,9 +706,7 @@ app.post(
                     sign(user),
 
                 user:
-                    safeWithDecryptedWakePhrase(
-                        user
-                    )
+                    safe(user)
 
             });
 
@@ -1039,9 +743,7 @@ app.get(
             }
 
             return res.json(
-                safeWithDecryptedWakePhrase(
-                    user
-                )
+                safe(user)
             );
 
         }
@@ -1076,43 +778,22 @@ app.put(
                 });
             }
 
-            const profileData =
-                pick(
-                    req.body,
-
-                    [
-                        "name",
-                        "age",
-                        "phone",
-                        "bio",
-                        "avatar",
-                        "wakePhrase"
-                    ]
-                );
-
-            // ==================================================
-            // ENCRYPT WAKE PHRASE BEFORE MONGODB SAVE
-            // ==================================================
-
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    profileData,
-                    "wakePhrase"
-                )
-            ) {
-
-                profileData.wakePhrase =
-                    encryptWakePhrase(
-                        profileData.wakePhrase
-                    );
-            }
-
             const user =
                 await User.findByIdAndUpdate(
 
                     req.uid,
 
-                    profileData,
+                    pick(
+                        req.body,
+                        [
+                            "name",
+                            "age",
+                            "phone",
+                            "bio",
+                            "avatar",
+                            "wakePhrase"
+                        ]
+                    ),
 
                     {
                         new: true
@@ -1134,9 +815,7 @@ app.put(
             }
 
             return res.json(
-                safeWithDecryptedWakePhrase(
-                    user
-                )
+                safe(user)
             );
 
         }
@@ -1235,14 +914,15 @@ app.get(
                         req.uid
                 })
                     .sort({
-                        pinned: -1,
-                        createdAt: -1
+                        pinned:
+                            -1,
+
+                        createdAt:
+                            -1
                     });
 
             return res.json(
-                entries.map(
-                    decryptEntry
-                )
+                entries
             );
 
         }
@@ -1264,53 +944,29 @@ app.post(
             res
         ) => {
 
-            const entryData =
-                pick(
-                    req.body,
-
-                    [
-                        "type",
-                        "title",
-                        "text",
-                        "mood",
-                        "tags",
-                        "photos",
-                        "pinned"
-                    ]
-                );
-
-            // ==================================================
-            // ENCRYPT MEMORY TEXT
-            // ==================================================
-
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    entryData,
-                    "text"
-                )
-            ) {
-
-                entryData.text =
-                    encryptDiaryText(
-                        entryData.text
-                    );
-            }
-
             const entry =
                 await Entry.create({
 
-                    ...entryData,
+                    ...pick(
+                        req.body,
+                        [
+                            "type",
+                            "title",
+                            "text",
+                            "mood",
+                            "tags",
+                            "photos",
+                            "pinned"
+                        ]
+                    ),
 
                     user:
                         req.uid
 
                 });
 
-            // Send decrypted text back to frontend
             return res.status(201).json(
-                decryptEntry(
-                    entry
-                )
+                entry
             );
 
         }
@@ -1351,44 +1007,23 @@ app.put(
                 });
             }
 
-            const updateData =
-                pick(
-                    req.body,
-
-                    [
-                        "type",
-                        "title",
-                        "text",
-                        "mood",
-                        "tags",
-                        "photos",
-                        "pinned"
-                    ]
-                );
-
-            // ==================================================
-            // ENCRYPT UPDATED MEMORY TEXT
-            // ==================================================
-
-            if (
-                Object.prototype.hasOwnProperty.call(
-                    updateData,
-                    "text"
-                )
-            ) {
-
-                updateData.text =
-                    encryptDiaryText(
-                        updateData.text
-                    );
-            }
-
             const newEntry =
                 await Entry.findByIdAndUpdate(
 
                     oldEntry._id,
 
-                    updateData,
+                    pick(
+                        req.body,
+                        [
+                            "type",
+                            "title",
+                            "text",
+                            "mood",
+                            "tags",
+                            "photos",
+                            "pinned"
+                        ]
+                    ),
 
                     {
                         new: true
@@ -1401,16 +1036,12 @@ app.put(
                     .filter(
                         photo =>
                             !(newEntry.photos || [])
-                                .includes(
-                                    photo
-                                )
+                                .includes(photo)
                     )
             );
 
             return res.json(
-                decryptEntry(
-                    newEntry
-                )
+                newEntry
             );
 
         }
@@ -1460,6 +1091,810 @@ app.delete(
 );
 
 // ======================================================
+// EXPENSES
+// ======================================================
+
+// GET ALL EXPENSES
+
+app.get(
+    "/api/expenses",
+
+    auth,
+
+    wrap(
+        async (
+            req,
+            res
+        ) => {
+
+            const expenses =
+                await Expense.find({
+                    user:
+                        req.uid
+                })
+                    .sort({
+                        date:
+                            -1,
+
+                        createdAt:
+                            -1
+                    });
+
+            return res.json(
+                expenses
+            );
+
+        }
+    )
+);
+
+// CREATE EXPENSE
+
+app.post(
+    "/api/expenses",
+
+    auth,
+
+    wrap(
+        async (
+            req,
+            res
+        ) => {
+
+            const amount =
+                Number(
+                    req.body.amount
+                );
+
+            const category =
+                String(
+                    req.body.category ||
+                    "Other"
+                ).trim();
+
+            const note =
+                String(
+                    req.body.note ||
+                    ""
+                ).trim();
+
+            const paymentMethod =
+                String(
+                    req.body.paymentMethod ||
+                    "Cash"
+                ).trim();
+
+            const date =
+                String(
+                    req.body.date ||
+                    ""
+                ).trim();
+
+            if (
+                !Number.isFinite(amount) ||
+                amount <= 0
+            ) {
+
+                return res.status(400).json({
+                    error:
+                        "Valid amount enter pannunga"
+                });
+            }
+
+            if (
+                !/^\d{4}-\d{2}-\d{2}$/.test(
+                    date
+                )
+            ) {
+
+                return res.status(400).json({
+                    error:
+                        "Valid date select pannunga"
+                });
+            }
+
+            const expense =
+                await Expense.create({
+
+                    user:
+                        req.uid,
+
+                    amount,
+
+                    category,
+
+                    note,
+
+                    paymentMethod,
+
+                    date
+
+                });
+
+            return res.status(201).json(
+                expense
+            );
+
+        }
+    )
+);
+
+// UPDATE EXPENSE
+
+app.put(
+    "/api/expenses/:id",
+
+    auth,
+
+    wrap(
+        async (
+            req,
+            res
+        ) => {
+
+            const amount =
+                Number(
+                    req.body.amount
+                );
+
+            const date =
+                String(
+                    req.body.date ||
+                    ""
+                ).trim();
+
+            if (
+                !Number.isFinite(amount) ||
+                amount <= 0
+            ) {
+
+                return res.status(400).json({
+                    error:
+                        "Valid amount enter pannunga"
+                });
+            }
+
+            if (
+                !/^\d{4}-\d{2}-\d{2}$/.test(
+                    date
+                )
+            ) {
+
+                return res.status(400).json({
+                    error:
+                        "Valid date select pannunga"
+                });
+            }
+
+            const expense =
+                await Expense.findOneAndUpdate(
+
+                    {
+                        _id:
+                            req.params.id,
+
+                        user:
+                            req.uid
+                    },
+
+                    {
+
+                        amount,
+
+                        category:
+                            String(
+                                req.body.category ||
+                                "Other"
+                            ).trim(),
+
+                        note:
+                            String(
+                                req.body.note ||
+                                ""
+                            ).trim(),
+
+                        paymentMethod:
+                            String(
+                                req.body.paymentMethod ||
+                                "Cash"
+                            ).trim(),
+
+                        date
+
+                    },
+
+                    {
+                        new: true
+                    }
+                );
+
+            if (!expense) {
+
+                return res.status(404).json({
+                    error:
+                        "Expense illa"
+                });
+            }
+
+            return res.json(
+                expense
+            );
+
+        }
+    )
+);
+
+// DELETE EXPENSE
+
+app.delete(
+    "/api/expenses/:id",
+
+    auth,
+
+    wrap(
+        async (
+            req,
+            res
+        ) => {
+
+            const expense =
+                await Expense.findOneAndDelete({
+
+                    _id:
+                        req.params.id,
+
+                    user:
+                        req.uid
+
+                });
+
+            if (!expense) {
+
+                return res.status(404).json({
+                    error:
+                        "Expense illa"
+                });
+            }
+
+            return res.json({
+                success:
+                    true
+            });
+
+        }
+    )
+);
+
+// ======================================================
+// AI MEMORY ASSISTANT
+// ======================================================
+
+function localAssistant(
+    message,
+    entries,
+    expenses
+) {
+
+    const q =
+        String(
+            message || ""
+        )
+            .toLowerCase()
+            .trim();
+
+    const now =
+        new Date();
+
+    const today =
+        now
+            .toISOString()
+            .slice(
+                0,
+                10
+            );
+
+    const month =
+        today.slice(
+            0,
+            7
+        );
+
+    const todayExpenses =
+        expenses.filter(
+            x =>
+                x.date ===
+                today
+        );
+
+    const monthExpenses =
+        expenses.filter(
+            x =>
+                String(
+                    x.date || ""
+                ).startsWith(
+                    month
+                )
+        );
+
+    const todayTotal =
+        todayExpenses.reduce(
+            (
+                sum,
+                x
+            ) =>
+                sum +
+                Number(
+                    x.amount || 0
+                ),
+            0
+        );
+
+    const monthTotal =
+        monthExpenses.reduce(
+            (
+                sum,
+                x
+            ) =>
+                sum +
+                Number(
+                    x.amount || 0
+                ),
+            0
+        );
+
+    // TODAY EXPENSE
+
+    if (
+        /today|innaiku|inru/.test(q) &&
+        /spent|expense|selavu|spend|amount|cost/.test(q)
+    ) {
+
+        return {
+
+            answer:
+                `Today you spent ₹${todayTotal.toFixed(2)} across ${todayExpenses.length} expense${todayExpenses.length === 1 ? "" : "s"}.`,
+
+            type:
+                "expense"
+
+        };
+    }
+
+    // MONTH EXPENSE
+
+    if (
+        /month|this month|indha month|intha month/.test(q) &&
+        /spent|expense|selavu|spend|amount|cost/.test(q)
+    ) {
+
+        return {
+
+            answer:
+                `This month you spent ₹${monthTotal.toFixed(2)} across ${monthExpenses.length} expenses.`,
+
+            type:
+                "expense"
+
+        };
+    }
+
+    // TOTAL EXPENSE
+
+    if (
+        /total|overall|all time|overall spend|motham|mothama/.test(q) &&
+        /spent|expense|selavu|spend|amount|cost/.test(q)
+    ) {
+
+        const total =
+            expenses.reduce(
+                (
+                    sum,
+                    x
+                ) =>
+                    sum +
+                    Number(
+                        x.amount || 0
+                    ),
+                0
+            );
+
+        return {
+
+            answer:
+                `Your recorded total spending is ₹${total.toFixed(2)} across ${expenses.length} expenses.`,
+
+            type:
+                "expense"
+
+        };
+    }
+
+    // CATEGORY EXPENSE
+
+    const categoryMatch =
+        q.match(
+            /(?:on|for|category)\s+([a-z ]{2,30})/
+        );
+
+    if (
+        categoryMatch &&
+        /spent|expense|selavu|spend/.test(q)
+    ) {
+
+        const needle =
+            categoryMatch[1]
+                .trim();
+
+        const rows =
+            monthExpenses.filter(
+                x =>
+                    String(
+                        x.category || ""
+                    )
+                        .toLowerCase()
+                        .includes(
+                            needle
+                        )
+            );
+
+        const total =
+            rows.reduce(
+                (
+                    sum,
+                    x
+                ) =>
+                    sum +
+                    Number(
+                        x.amount || 0
+                    ),
+                0
+            );
+
+        return {
+
+            answer:
+                `I found ₹${total.toFixed(2)} spent on ${needle} this month (${rows.length} entries).`,
+
+            type:
+                "expense"
+
+        };
+    }
+
+    // MEMORY SEARCH
+
+    if (
+        /remember|memory|diary|write|wrote|entry|entries|what did i/.test(q)
+    ) {
+
+        const recent =
+            entries.slice(
+                0,
+                5
+            );
+
+        if (!recent.length) {
+
+            return {
+
+                answer:
+                    "You don't have any saved memories yet.",
+
+                type:
+                    "memory"
+
+            };
+        }
+
+        const lines =
+            recent.map(
+                (
+                    e,
+                    i
+                ) =>
+                    `${i + 1}. ${e.title || "Untitled memory"} — ${(e.text || "").slice(0, 100)}`
+            );
+
+        return {
+
+            answer:
+                `Here are your latest memories:\n${lines.join("\n")}`,
+
+            type:
+                "memory"
+
+        };
+    }
+
+    // DEFAULT OVERVIEW
+
+    const recentExpenses =
+        expenses.slice(
+            0,
+            5
+        );
+
+    const recentEntries =
+        entries.slice(
+            0,
+            3
+        );
+
+    return {
+
+        answer:
+            `I can help with your diary and spending.\n\nToday: ₹${todayTotal.toFixed(2)} spent\nThis month: ₹${monthTotal.toFixed(2)} spent\nSaved memories: ${entries.length}\nExpenses recorded: ${expenses.length}\n\nTry: “How much did I spend today?”, “How much this month?”, or “Show my recent memories.”`,
+
+        type:
+            "overview",
+
+        recentExpenses,
+
+        recentEntries
+
+    };
+}
+
+// ======================================================
+// AI ASSISTANT API
+// ======================================================
+
+app.post(
+    "/api/assistant",
+
+    auth,
+
+    wrap(
+        async (
+            req,
+            res
+        ) => {
+
+            const message =
+                String(
+                    req.body.message ||
+                    ""
+                ).trim();
+
+            if (!message) {
+
+                return res.status(400).json({
+                    error:
+                        "Question enter pannunga"
+                });
+            }
+
+            const [
+                entries,
+                expenses
+            ] =
+                await Promise.all([
+
+                    Entry.find({
+                        user:
+                            req.uid
+                    })
+                        .sort({
+                            createdAt:
+                                -1
+                        })
+                        .limit(50)
+                        .lean(),
+
+                    Expense.find({
+                        user:
+                            req.uid
+                    })
+                        .sort({
+                            date:
+                                -1,
+
+                            createdAt:
+                                -1
+                        })
+                        .limit(500)
+                        .lean()
+
+                ]);
+
+            // ==================================================
+            // OPTIONAL REAL AI
+            // ==================================================
+
+            if (
+                process.env.OPENAI_API_KEY &&
+                typeof fetch ===
+                    "function"
+            ) {
+
+                try {
+
+                    const memoryContext =
+                        entries
+                            .slice(
+                                0,
+                                20
+                            )
+                            .map(
+                                e => ({
+
+                                    title:
+                                        e.title,
+
+                                    type:
+                                        e.type,
+
+                                    mood:
+                                        e.mood,
+
+                                    text:
+                                        String(
+                                            e.text ||
+                                            ""
+                                        ).slice(
+                                            0,
+                                            500
+                                        ),
+
+                                    createdAt:
+                                        e.createdAt
+
+                                })
+                            );
+
+                    const expenseContext =
+                        expenses
+                            .slice(
+                                0,
+                                100
+                            )
+                            .map(
+                                e => ({
+
+                                    amount:
+                                        e.amount,
+
+                                    category:
+                                        e.category,
+
+                                    note:
+                                        e.note,
+
+                                    paymentMethod:
+                                        e.paymentMethod,
+
+                                    date:
+                                        e.date
+
+                                })
+                            );
+
+                    const aiResponse =
+                        await fetch(
+                            "https://api.openai.com/v1/chat/completions",
+                            {
+
+                                method:
+                                    "POST",
+
+                                headers: {
+
+                                    "Content-Type":
+                                        "application/json",
+
+                                    "Authorization":
+                                        `Bearer ${process.env.OPENAI_API_KEY}`
+
+                                },
+
+                                body:
+                                    JSON.stringify({
+
+                                        model:
+                                            process.env.OPENAI_MODEL ||
+                                            "gpt-4o-mini",
+
+                                        temperature:
+                                            0.2,
+
+                                        messages: [
+
+                                            {
+
+                                                role:
+                                                    "system",
+
+                                                content:
+                                                    "You are Cool Diary's private memory assistant. Answer only from the supplied memory and expense context. Be concise, friendly, and do not invent facts. Currency is INR (₹)."
+
+                                            },
+
+                                            {
+
+                                                role:
+                                                    "user",
+
+                                                content:
+                                                    JSON.stringify({
+
+                                                        question:
+                                                            message,
+
+                                                        memories:
+                                                            memoryContext,
+
+                                                        expenses:
+                                                            expenseContext
+
+                                                    })
+
+                                            }
+
+                                        ]
+
+                                    })
+
+                            }
+                        );
+
+                    if (
+                        aiResponse.ok
+                    ) {
+
+                        const payload =
+                            await aiResponse.json();
+
+                        const answer =
+                            payload
+                                ?.choices?.[0]
+                                ?.message
+                                ?.content
+                                ?.trim();
+
+                        if (answer) {
+
+                            return res.json({
+
+                                answer,
+
+                                type:
+                                    "ai",
+
+                                provider:
+                                    "openai"
+
+                            });
+                        }
+                    }
+
+                } catch (
+                    aiError
+                ) {
+
+                    console.error(
+                        "AI provider fallback:",
+                        aiError.message
+                    );
+                }
+            }
+
+            // ==================================================
+            // LOCAL FALLBACK
+            // ==================================================
+
+            return res.json(
+                localAssistant(
+                    message,
+                    entries,
+                    expenses
+                )
+            );
+
+        }
+    )
+);
+
+// ======================================================
 // API 404
 // ======================================================
 
@@ -1500,11 +1935,13 @@ app.get(
     ) => {
 
         res.sendFile(
+
             path.join(
                 __dirname,
                 "public",
                 "index.html"
             )
+
         );
 
     }
@@ -1545,6 +1982,7 @@ async function startServer() {
             process.env.MONGODB_URI,
 
             {
+
                 serverSelectionTimeoutMS:
                     15000,
 
@@ -1556,7 +1994,9 @@ async function startServer() {
 
                 tls:
                     true
+
             }
+
         );
 
         console.log(
@@ -1564,6 +2004,7 @@ async function startServer() {
         );
 
         app.listen(
+
             PORT,
 
             () => {
@@ -1585,9 +2026,12 @@ async function startServer() {
                 );
 
             }
+
         );
 
-    } catch (error) {
+    } catch (
+        error
+    ) {
 
         console.error(
             "================================="
@@ -1606,9 +2050,7 @@ async function startServer() {
         );
 
         process.exit(1);
-
     }
-
 }
 
 startServer();
