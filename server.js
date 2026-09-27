@@ -231,53 +231,38 @@ const Entry = mongoose.model(
 // ======================================================
 // MEMORY ENCRYPTION
 // ======================================================
-// New diary/message/activity text is encrypted before
-// being stored in MongoDB.
-//
-// AES-256-GCM is used.
-//
-// Old entries that are not encrypted remain readable.
-// This keeps existing data compatible.
-//
-// Recommended .env:
-// DIARY_ENCRYPTION_KEY=your-long-random-secret
-//
-// If DIARY_ENCRYPTION_KEY is not present,
-// JWT_SECRET is used as fallback.
-//
-// ======================================================
 
 const DIARY_ENCRYPTION_SECRET =
     process.env.DIARY_ENCRYPTION_KEY ||
-    process.env.JWT_SECRET ||
-    "";
+    process.env.JWT_SECRET;
 
-function getDiaryEncryptionKey() {
+function diaryKey() {
 
     return crypto
         .createHash("sha256")
         .update(
             String(
-                DIARY_ENCRYPTION_SECRET
-            ),
-            "utf8"
+                DIARY_ENCRYPTION_SECRET || ""
+            )
         )
         .digest();
 
 }
 
+// ======================================================
+// DIARY TEXT ENCRYPTION
+// ======================================================
+
 function encryptDiaryText(value) {
 
-    const text = String(
-        value ?? ""
-    );
+    const text =
+        String(
+            value ?? ""
+        );
 
     if (!text) {
         return text;
     }
-
-    const key =
-        getDiaryEncryptionKey();
 
     const iv =
         crypto.randomBytes(12);
@@ -285,7 +270,7 @@ function encryptDiaryText(value) {
     const cipher =
         crypto.createCipheriv(
             "aes-256-gcm",
-            key,
+            diaryKey(),
             iv
         );
 
@@ -298,17 +283,20 @@ function encryptDiaryText(value) {
             cipher.final()
         ]);
 
-    const authTag =
+    const tag =
         cipher.getAuthTag();
 
     return [
         "CD1",
         iv.toString("base64url"),
-        authTag.toString("base64url"),
+        tag.toString("base64url"),
         encrypted.toString("base64url")
     ].join(".");
-
 }
+
+// ======================================================
+// DIARY TEXT DECRYPTION
+// ======================================================
 
 function decryptDiaryText(value) {
 
@@ -317,7 +305,7 @@ function decryptDiaryText(value) {
             value ?? ""
         );
 
-    // Existing old entries are plain text.
+    // Old entries remain compatible.
     if (!text.startsWith("CD1.")) {
         return text;
     }
@@ -337,7 +325,7 @@ function decryptDiaryText(value) {
                 "base64url"
             );
 
-        const authTag =
+        const tag =
             Buffer.from(
                 parts[2],
                 "base64url"
@@ -352,25 +340,18 @@ function decryptDiaryText(value) {
         const decipher =
             crypto.createDecipheriv(
                 "aes-256-gcm",
-                getDiaryEncryptionKey(),
+                diaryKey(),
                 iv
             );
 
-        decipher.setAuthTag(
-            authTag
-        );
+        decipher.setAuthTag(tag);
 
-        const decrypted =
-            Buffer.concat([
-                decipher.update(
-                    encrypted
-                ),
-                decipher.final()
-            ]);
-
-        return decrypted.toString(
-            "utf8"
-        );
+        return Buffer.concat([
+            decipher.update(
+                encrypted
+            ),
+            decipher.final()
+        ]).toString("utf8");
 
     } catch (error) {
 
@@ -381,24 +362,197 @@ function decryptDiaryText(value) {
 
         return "[Encrypted memory could not be opened]";
     }
-
 }
+
+// ======================================================
+// ENTRY DECRYPT
+// ======================================================
 
 function decryptEntry(entry) {
 
-    const object =
+    const obj =
         entry.toObject
             ? entry.toObject()
             : {
                 ...entry
             };
 
-    object.text =
+    obj.text =
         decryptDiaryText(
-            object.text
+            obj.text
         );
 
-    return object;
+    return obj;
+}
+
+// ======================================================
+// WAKE PHRASE ENCRYPTION
+// ======================================================
+// Example:
+//
+// User types:
+// hi cool
+//
+// MongoDB stores:
+// CD1.xxxxx.xxxxx.xxxxx
+//
+// Frontend receives:
+// hi cool
+//
+// So voice recognition continues to work.
+// ======================================================
+
+function encryptWakePhrase(value) {
+
+    const text =
+        String(
+            value ?? ""
+        ).trim();
+
+    if (!text) {
+        return text;
+    }
+
+    // Prevent double encryption.
+    if (
+        text.startsWith("CD1.")
+    ) {
+        return text;
+    }
+
+    const iv =
+        crypto.randomBytes(12);
+
+    const cipher =
+        crypto.createCipheriv(
+            "aes-256-gcm",
+            diaryKey(),
+            iv
+        );
+
+    const encrypted =
+        Buffer.concat([
+            cipher.update(
+                text,
+                "utf8"
+            ),
+            cipher.final()
+        ]);
+
+    const tag =
+        cipher.getAuthTag();
+
+    return [
+        "CD1",
+        iv.toString("base64url"),
+        tag.toString("base64url"),
+        encrypted.toString("base64url")
+    ].join(".");
+}
+
+// ======================================================
+// WAKE PHRASE DECRYPTION
+// ======================================================
+
+function decryptWakePhrase(value) {
+
+    const text =
+        String(
+            value ?? ""
+        );
+
+    // Existing users may still have plain text.
+    if (
+        !text.startsWith("CD1.")
+    ) {
+        return text;
+    }
+
+    try {
+
+        const parts =
+            text.split(".");
+
+        if (parts.length !== 4) {
+            return text;
+        }
+
+        const iv =
+            Buffer.from(
+                parts[1],
+                "base64url"
+            );
+
+        const tag =
+            Buffer.from(
+                parts[2],
+                "base64url"
+            );
+
+        const encrypted =
+            Buffer.from(
+                parts[3],
+                "base64url"
+            );
+
+        const decipher =
+            crypto.createDecipheriv(
+                "aes-256-gcm",
+                diaryKey(),
+                iv
+            );
+
+        decipher.setAuthTag(
+            tag
+        );
+
+        return Buffer.concat([
+            decipher.update(
+                encrypted
+            ),
+            decipher.final()
+        ]).toString("utf8");
+
+    } catch (error) {
+
+        console.error(
+            "WAKE PHRASE DECRYPT ERROR:",
+            error.message
+        );
+
+        return "";
+    }
+}
+
+// ======================================================
+// SAFE USER
+// ======================================================
+
+function safe(user) {
+
+    const obj =
+        user.toObject();
+
+    delete obj.password;
+
+    return obj;
+}
+
+// ======================================================
+// SAFE USER + DECRYPTED WAKE PHRASE
+// ======================================================
+
+function safeWithDecryptedWakePhrase(user) {
+
+    const obj =
+        safe(user);
+
+    obj.wakePhrase =
+        decryptWakePhrase(
+            user.wakePhrase
+        );
+
+    return obj;
 }
 
 // ======================================================
@@ -409,29 +563,24 @@ function sign(user) {
 
     return jwt.sign(
         {
-            id: user._id.toString()
+            id:
+                user._id.toString()
         },
 
         process.env.JWT_SECRET,
 
         {
-            expiresIn: "30d"
+            expiresIn:
+                "30d"
         }
     );
 
 }
 
-function safe(user) {
-
-    const object =
-        user.toObject();
-
-    delete object.password;
-
-    return object;
-}
-
-function pick(object, keys) {
+function pick(
+    obj,
+    keys
+) {
 
     return Object.fromEntries(
 
@@ -439,27 +588,28 @@ function pick(object, keys) {
             .filter(
                 key =>
                     Object.prototype.hasOwnProperty.call(
-                        object,
+                        obj,
                         key
                     )
             )
-
             .map(
                 key => [
                     key,
-                    object[key]
+                    obj[key]
                 ]
             )
-
     );
-
 }
 
 // ======================================================
 // AUTH MIDDLEWARE
 // ======================================================
 
-function auth(req, res, next) {
+function auth(
+    req,
+    res,
+    next
+) {
 
     try {
 
@@ -477,7 +627,6 @@ function auth(req, res, next) {
                 error:
                     "Login pannunga"
             });
-
         }
 
         const token =
@@ -491,7 +640,6 @@ function auth(req, res, next) {
                 error:
                     "Login token missing"
             });
-
         }
 
         const decoded =
@@ -516,9 +664,7 @@ function auth(req, res, next) {
             error:
                 "Login session expired. Login pannunga"
         });
-
     }
-
 }
 
 // ======================================================
@@ -554,7 +700,6 @@ function wrap(fn) {
                     error:
                         "Email already irukku"
                 });
-
             }
 
             return res.status(500).json({
@@ -562,11 +707,8 @@ function wrap(fn) {
                     error.message ||
                     "Server error"
             });
-
         }
-
     };
-
 }
 
 // ======================================================
@@ -576,20 +718,20 @@ function wrap(fn) {
 function getPublicId(url) {
 
     const match =
-        /\/upload\/(?:v\d+\/)?(.+?)\.[a-z0-9]+$/i
-            .exec(
-                url || ""
-            );
+        /\/upload\/(?:v\d+\/)?(.+?)\.[a-z0-9]+$/i.exec(
+            url || ""
+        );
 
     return match
         ? match[1]
         : null;
-
 }
 
 async function destroyImages(urls) {
 
-    if (!Array.isArray(urls)) {
+    if (
+        !Array.isArray(urls)
+    ) {
         return;
     }
 
@@ -609,9 +751,7 @@ async function destroyImages(urls) {
                             () => null
                         )
             )
-
     );
-
 }
 
 // ======================================================
@@ -621,16 +761,23 @@ async function destroyImages(urls) {
 app.get(
     "/api/test",
 
-    (req, res) => {
+    (
+        req,
+        res
+    ) => {
 
         res.json({
-            success: true,
+
+            success:
+                true,
+
             message:
                 "Cool Diary API working",
+
             time:
                 new Date().toISOString()
-        });
 
+        });
     }
 );
 
@@ -673,7 +820,6 @@ app.post(
                     error:
                         "Name enter pannunga"
                 });
-
             }
 
             if (!email) {
@@ -682,7 +828,6 @@ app.post(
                     error:
                         "Email enter pannunga"
                 });
-
             }
 
             if (!password) {
@@ -691,7 +836,6 @@ app.post(
                     error:
                         "Password enter pannunga"
                 });
-
             }
 
             if (
@@ -702,7 +846,6 @@ app.post(
                     error:
                         "Password minimum 6 characters venum"
                 });
-
             }
 
             const existingUser =
@@ -716,7 +859,6 @@ app.post(
                     error:
                         "Indha email already registered"
                 });
-
             }
 
             const hashedPassword =
@@ -735,14 +877,19 @@ app.post(
 
                     name,
 
+                    // IMPORTANT:
+                    // Wake phrase is encrypted
+                    // before MongoDB save.
                     wakePhrase:
-                        "hi cool"
-
+                        encryptWakePhrase(
+                            "hi cool"
+                        )
                 });
 
             return res.status(201).json({
 
-                success: true,
+                success:
+                    true,
 
                 message:
                     "Account created successfully",
@@ -751,7 +898,9 @@ app.post(
                     sign(user),
 
                 user:
-                    safe(user)
+                    safeWithDecryptedWakePhrase(
+                        user
+                    )
 
             });
 
@@ -792,7 +941,6 @@ app.post(
                     error:
                         "Email enter pannunga"
                 });
-
             }
 
             if (!password) {
@@ -801,7 +949,6 @@ app.post(
                     error:
                         "Password enter pannunga"
                 });
-
             }
 
             console.log(
@@ -820,7 +967,6 @@ app.post(
                     error:
                         "Email / password thappu"
                 });
-
             }
 
             const validPassword =
@@ -835,7 +981,6 @@ app.post(
                     error:
                         "Email / password thappu"
                 });
-
             }
 
             console.log(
@@ -845,7 +990,8 @@ app.post(
 
             return res.status(200).json({
 
-                success: true,
+                success:
+                    true,
 
                 message:
                     "Login successful",
@@ -854,7 +1000,9 @@ app.post(
                     sign(user),
 
                 user:
-                    safe(user)
+                    safeWithDecryptedWakePhrase(
+                        user
+                    )
 
             });
 
@@ -888,11 +1036,12 @@ app.get(
                     error:
                         "User not found"
                 });
-
             }
 
             return res.json(
-                safe(user)
+                safeWithDecryptedWakePhrase(
+                    user
+                )
             );
 
         }
@@ -925,7 +1074,37 @@ app.put(
                     error:
                         "User not found"
                 });
+            }
 
+            const profileData =
+                pick(
+                    req.body,
+
+                    [
+                        "name",
+                        "age",
+                        "phone",
+                        "bio",
+                        "avatar",
+                        "wakePhrase"
+                    ]
+                );
+
+            // ==================================================
+            // ENCRYPT WAKE PHRASE BEFORE MONGODB SAVE
+            // ==================================================
+
+            if (
+                Object.prototype.hasOwnProperty.call(
+                    profileData,
+                    "wakePhrase"
+                )
+            ) {
+
+                profileData.wakePhrase =
+                    encryptWakePhrase(
+                        profileData.wakePhrase
+                    );
             }
 
             const user =
@@ -933,23 +1112,11 @@ app.put(
 
                     req.uid,
 
-                    pick(
-                        req.body,
-
-                        [
-                            "name",
-                            "age",
-                            "phone",
-                            "bio",
-                            "avatar",
-                            "wakePhrase"
-                        ]
-                    ),
+                    profileData,
 
                     {
                         new: true
                     }
-
                 );
 
             if (
@@ -964,11 +1131,12 @@ app.put(
                 await destroyImages([
                     oldUser.avatar
                 ]);
-
             }
 
             return res.json(
-                safe(user)
+                safeWithDecryptedWakePhrase(
+                    user
+                )
             );
 
         }
@@ -994,17 +1162,15 @@ app.post(
                 req.body.image;
 
             if (
-                !/^data:image\/(jpeg|jpg|png|webp|gif);base64,/
-                    .test(
-                        image || ""
-                    )
+                !/^data:image\/(jpeg|jpg|png|webp|gif);base64,/.test(
+                    image || ""
+                )
             ) {
 
                 return res.status(400).json({
                     error:
                         "Valid image illa"
                 });
-
             }
 
             if (
@@ -1017,7 +1183,6 @@ app.post(
                     error:
                         "Cloudinary .env configuration missing"
                 });
-
             }
 
             const result =
@@ -1037,7 +1202,8 @@ app.post(
 
             return res.json({
 
-                success: true,
+                success:
+                    true,
 
                 url:
                     result.secure_url
@@ -1114,7 +1280,7 @@ app.post(
                 );
 
             // ==================================================
-            // ENCRYPT MEMORY TEXT BEFORE MONGODB SAVE
+            // ENCRYPT MEMORY TEXT
             // ==================================================
 
             if (
@@ -1128,7 +1294,6 @@ app.post(
                     encryptDiaryText(
                         entryData.text
                     );
-
             }
 
             const entry =
@@ -1141,9 +1306,11 @@ app.post(
 
                 });
 
-            // Return decrypted version to frontend
+            // Send decrypted text back to frontend
             return res.status(201).json(
-                decryptEntry(entry)
+                decryptEntry(
+                    entry
+                )
             );
 
         }
@@ -1182,7 +1349,6 @@ app.put(
                     error:
                         "Entry illa"
                 });
-
             }
 
             const updateData =
@@ -1215,7 +1381,6 @@ app.put(
                     encryptDiaryText(
                         updateData.text
                     );
-
             }
 
             const newEntry =
@@ -1228,10 +1393,8 @@ app.put(
                     {
                         new: true
                     }
-
                 );
 
-            // Delete removed Cloudinary photos
             await destroyImages(
 
                 (oldEntry.photos || [])
@@ -1242,10 +1405,8 @@ app.put(
                                     photo
                                 )
                     )
-
             );
 
-            // Return decrypted entry
             return res.json(
                 decryptEntry(
                     newEntry
@@ -1287,11 +1448,11 @@ app.delete(
                 await destroyImages(
                     entry.photos
                 );
-
             }
 
             return res.json({
-                success: true
+                success:
+                    true
             });
 
         }
@@ -1364,7 +1525,6 @@ async function startServer() {
             throw new Error(
                 "MONGODB_URI missing in .env"
             );
-
         }
 
         if (
@@ -1374,7 +1534,6 @@ async function startServer() {
             throw new Error(
                 "JWT_SECRET missing in .env"
             );
-
         }
 
         console.log(
@@ -1395,9 +1554,9 @@ async function startServer() {
                 socketTimeoutMS:
                     45000,
 
-                tls: true
+                tls:
+                    true
             }
-
         );
 
         console.log(
