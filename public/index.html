@@ -1432,7 +1432,7 @@ textarea{
     </h2>
 
     <p id="lockMsg">
-      Listening...
+      Tap the mic and say "hey"
     </p>
 
 
@@ -2918,7 +2918,6 @@ $("psave").onclick = async () => {
 
     if (unlocked && T) {
       stopVoice();
-      setTimeout(() => startVoice("lock"), 400);
     }
   } catch (error) {
     alert(error.message);
@@ -3564,6 +3563,7 @@ function stopVoice() {
   voiceListening = false;
   voiceMode = null;
   restartingVoice = false;
+  clearTimeout(window.__voiceAutoOffTimer);
 
   try {
     if (voiceRec) {
@@ -3596,6 +3596,9 @@ function startVoiceStage(mode) {
   } else if (mode === "lock-command") {
     setListeningText("Hey detected. Say lock...");
   }
+
+  /* Show the mic as actively on while this stage is running. */
+  $("micBtn")?.classList.add("listening", "on");
 
   const recognition = new SR();
   voiceRec = recognition;
@@ -3682,12 +3685,24 @@ function restartVoiceStage(mode) {
   }, 700);
 }
 
-/* Begin the locked-screen flow: hey -> wake phrase. */
+/* Begin the locked-screen flow: hey -> wake phrase.
+   Only ever called when the user taps the mic button, so the
+   microphone stays off until they choose to turn it on. A safety
+   timeout switches it back off automatically if "hey" is never said,
+   instead of leaving it listening in the background indefinitely. */
 function startVoice() {
   if (!SR || !T || unlocked) return;
   if (dictActive) stopDictation();
   if (voiceListening) return;
   startVoiceStage("hey-unlock");
+
+  clearTimeout(window.__voiceAutoOffTimer);
+  window.__voiceAutoOffTimer = setTimeout(() => {
+    if (voiceListening && voiceMode === "hey-unlock") {
+      stopVoice();
+      setListeningText('No "hey" heard. Tap 🎙️ to try again.');
+    }
+  }, 20000);
 }
 
 /* Begin the unlocked-screen flow: hey -> lock. */
@@ -3705,10 +3720,10 @@ function openDiary() {
   updateDashboard();
   renderEntries();
 
-  /* After opening, wait for: hey -> lock. */
-  setTimeout(() => {
-    if (unlocked && T) startLockVoice();
-  }, 500);
+  /* No background "hey -> lock" mic listening while the diary is open.
+     Use the Lock button to lock instead — this stops the mic from
+     silently switching on/off in the background while you're using
+     the app. */
 }
 
 function lockDiary() {
@@ -3719,12 +3734,8 @@ function lockDiary() {
   unlocked = false;
   showPage("lock");
   $("typed").value = "";
-  setListeningText("Listening for hey...");
-
-  /* After locking, wait for: hey -> wake phrase. */
-  setTimeout(() => {
-    if (!unlocked && T) startVoice();
-  }, 400);
+  /* Mic stays off until the user taps it — no auto-restart here. */
+  setListeningText('Tap 🎙️ and say "hey"');
 }
 
 $("lockBtn").onclick = lockDiary;
@@ -3777,7 +3788,10 @@ async function start() {
       openDiary();
     } else {
       showPage("lock");
-      startVoice("unlock");
+      /* Mic no longer auto-starts on load. It only turns on when the
+         user taps the mic button, so it isn't constantly switching
+         itself on/off in the background. */
+      setListeningText('Tap 🎙️ and say "hey"');
     }
   } catch (error) {
     console.error("START ERROR:", error);
