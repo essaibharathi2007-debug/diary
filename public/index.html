@@ -1687,6 +1687,97 @@ textarea{
 </section>
 
 
+
+
+<!-- =====================================================
+     AI MEMORY ASSISTANT + DAILY EXPENSE TRACKER
+===================================================== -->
+<section class="ai-expense-grid">
+
+  <div class="feature-card">
+    <h3>🤖 AI Memory Assistant</h3>
+    <div class="feature-sub">
+      Ask about your saved memories or spending. If OPENAI_API_KEY is configured, this uses AI; otherwise a private local assistant answers from your saved data.
+    </div>
+
+    <div class="ai-chat">
+      <textarea id="assistantInput" rows="3" placeholder="Example: How much did I spend today? / Show my recent memories..."></textarea>
+
+      <div class="ai-chip-row">
+        <button class="ai-chip" data-ai-question="How much did I spend today?">💰 Today's spending</button>
+        <button class="ai-chip" data-ai-question="How much did I spend this month?">📅 This month</button>
+        <button class="ai-chip" data-ai-question="Show my recent memories.">🧠 Recent memories</button>
+      </div>
+
+      <button class="primary" id="assistantAsk">✨ Ask Memory Assistant</button>
+      <div id="assistantAnswer" class="ai-answer empty">Your assistant response will appear here.</div>
+    </div>
+  </div>
+
+  <div class="feature-card">
+    <h3>💸 Daily Expense Tracker</h3>
+    <div class="feature-sub">
+      Daily evlo selavu pannen-nu amount, category, note and payment method save pannunga. MongoDB-la account-wise store aagum.
+    </div>
+
+    <div class="expense-form-grid">
+      <div class="field">
+        <label>Amount (₹)</label>
+        <input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="250">
+      </div>
+
+      <div class="field">
+        <label>Date</label>
+        <input id="expenseDate" type="date">
+      </div>
+
+      <div class="field">
+        <label>Category</label>
+        <select id="expenseCategory">
+          <option>Food</option>
+          <option>Travel</option>
+          <option>Shopping</option>
+          <option>Bills</option>
+          <option>Education</option>
+          <option>Health</option>
+          <option>Entertainment</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label>Payment</label>
+        <select id="expenseMethod">
+          <option>Cash</option>
+          <option>UPI</option>
+          <option>Card</option>
+          <option>Bank Transfer</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label>Note</label>
+        <input id="expenseNote" placeholder="Lunch, bus, college, coffee...">
+      </div>
+
+      <div class="full">
+        <button class="primary" id="expenseSave">💾 Save expense</button>
+      </div>
+    </div>
+
+    <div class="expense-summary">
+      <div class="expense-mini"><b id="expenseTodayTotal">₹0</b><span>Today</span></div>
+      <div class="expense-mini"><b id="expenseMonthTotal">₹0</b><span>This month</span></div>
+      <div class="expense-mini"><b id="expenseAllTotal">₹0</b><span>All recorded</span></div>
+    </div>
+
+    <div id="expenseList" class="expense-list"></div>
+  </div>
+
+</section>
+
+
 <!-- =====================================================
      PROFILE
 ===================================================== -->
@@ -3824,6 +3915,93 @@ function buildReportHTML() {
     .page { width:100%; padding:0; }
     .cover,.profile,.summary,.entry-card { box-shadow:none; }
   }
+
+/* =====================================================
+   AI MEMORY ASSISTANT + EXPENSE TRACKER
+===================================================== */
+.ai-expense-grid{
+  display:grid;
+  grid-template-columns:1.1fr .9fr;
+  gap:18px;
+  margin-top:18px;
+}
+.feature-card{
+  border:1px solid var(--line);
+  background:var(--card);
+  border-radius:22px;
+  padding:20px;
+  box-shadow:0 12px 35px rgba(0,0,0,.08);
+}
+.feature-card h3{margin:0 0 5px;font-size:18px}
+.feature-sub{color:var(--mut);font-size:12px;line-height:1.5;margin-bottom:16px}
+.expense-form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+.expense-form-grid .full{grid-column:1/-1}
+.expense-summary{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin:14px 0;
+}
+.expense-mini{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.025);
+}
+.expense-mini b{display:block;font-size:18px}
+.expense-mini span{font-size:10px;color:var(--mut)}
+.expense-list{display:grid;gap:8px;max-height:330px;overflow:auto}
+.expense-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:11px 12px;
+}
+.expense-row-main{min-width:0}
+.expense-row-title{font-weight:800;font-size:13px}
+.expense-row-meta{font-size:10px;color:var(--mut);margin-top:3px}
+.expense-row-amount{font-weight:900;font-size:15px;white-space:nowrap}
+.expense-row-actions{display:flex;gap:5px;margin-top:6px}
+.expense-row-actions button{padding:5px 8px;font-size:10px}
+.ai-chat{display:flex;flex-direction:column;gap:10px}
+.ai-answer{
+  min-height:120px;
+  white-space:pre-wrap;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  font-size:13px;
+  line-height:1.6;
+  color:var(--ink);
+  background:rgba(255,255,255,.025);
+}
+.ai-answer.empty{color:var(--mut)}
+.ai-chip-row{display:flex;gap:7px;flex-wrap:wrap}
+.ai-chip{
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--ink);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:10px;
+  cursor:pointer;
+}
+.ai-chip:hover{border-color:var(--acc)}
+@media(max-width:850px){
+  .ai-expense-grid{grid-template-columns:1fr}
+}
+@media(max-width:600px){
+  .expense-form-grid,.expense-summary{grid-template-columns:1fr}
+  .expense-form-grid .full{grid-column:auto}
+}
+
 </style>
 </head>
 <body>
@@ -4190,6 +4368,196 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+
+
+/* =====================================================
+   AI MEMORY ASSISTANT + EXPENSE TRACKER
+===================================================== */
+let EXPENSES = [];
+let expenseEditId = null;
+
+function money(value) {
+  return "₹" + Number(value || 0).toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  });
+}
+
+function localDateKey(date = new Date()) {
+  const d = new Date(date);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function setTodayExpenseDate() {
+  const el = $("expenseDate");
+  if (el && !el.value) el.value = localDateKey();
+}
+
+async function loadExpenses() {
+  try {
+    EXPENSES = await api("/expenses");
+    if (!Array.isArray(EXPENSES)) EXPENSES = [];
+    renderExpenses();
+  } catch (error) {
+    console.error("Expense load error:", error);
+  }
+}
+
+function renderExpenses() {
+  const list = $("expenseList");
+  if (!list) return;
+
+  const today = localDateKey();
+  const month = today.slice(0, 7);
+  const todayTotal = EXPENSES.filter(x => x.date === today)
+    .reduce((sum, x) => sum + Number(x.amount || 0), 0);
+  const monthTotal = EXPENSES.filter(x => String(x.date || "").startsWith(month))
+    .reduce((sum, x) => sum + Number(x.amount || 0), 0);
+  const allTotal = EXPENSES.reduce((sum, x) => sum + Number(x.amount || 0), 0);
+
+  $("expenseTodayTotal").textContent = money(todayTotal);
+  $("expenseMonthTotal").textContent = money(monthTotal);
+  $("expenseAllTotal").textContent = money(allTotal);
+
+  if (!EXPENSES.length) {
+    list.innerHTML = `<div class="empty">No expenses yet. First expense save pannunga 💸</div>`;
+    return;
+  }
+
+  list.innerHTML = EXPENSES.slice(0, 30).map(expense => `
+    <div class="expense-row" data-expense-id="${escapeHTML(expense._id)}">
+      <div class="expense-row-main">
+        <div class="expense-row-title">${escapeHTML(expense.category || "Other")}</div>
+        <div class="expense-row-meta">
+          ${escapeHTML(expense.date || "")} · ${escapeHTML(expense.paymentMethod || "Cash")}
+          ${expense.note ? ` · ${escapeHTML(expense.note)}` : ""}
+        </div>
+        <div class="expense-row-actions">
+          <button class="ghost expense-edit" data-id="${escapeHTML(expense._id)}">✏️ Edit</button>
+          <button class="ghost danger expense-delete" data-id="${escapeHTML(expense._id)}">🗑 Delete</button>
+        </div>
+      </div>
+      <div class="expense-row-amount">${money(expense.amount)}</div>
+    </div>
+  `).join("");
+}
+
+async function saveExpense() {
+  const amount = Number($("expenseAmount").value);
+  const date = $("expenseDate").value;
+  const category = $("expenseCategory").value;
+  const paymentMethod = $("expenseMethod").value;
+  const note = $("expenseNote").value.trim();
+
+  if (!Number.isFinite(amount) || amount <= 0) {
+    alert("Amount correct-aa enter pannunga.");
+    return;
+  }
+  if (!date) {
+    alert("Date select pannunga.");
+    return;
+  }
+
+  const button = $("expenseSave");
+  button.disabled = true;
+  button.textContent = expenseEditId ? "Updating..." : "Saving...";
+
+  try {
+    const body = { amount, date, category, paymentMethod, note };
+    if (expenseEditId) {
+      await api(`/expenses/${expenseEditId}`, "PUT", body);
+      toast("Expense updated ✅");
+    } else {
+      await api("/expenses", "POST", body);
+      toast("Expense saved 💸");
+    }
+
+    expenseEditId = null;
+    $("expenseAmount").value = "";
+    $("expenseNote").value = "";
+    $("expenseDate").value = localDateKey();
+    $("expenseCategory").value = "Food";
+    $("expenseMethod").value = "Cash";
+    await loadExpenses();
+  } catch (error) {
+    alert(error.message);
+  } finally {
+    button.disabled = false;
+    button.textContent = "💾 Save expense";
+  }
+}
+
+$("expenseSave").onclick = saveExpense;
+setTodayExpenseDate();
+
+$("expenseList").addEventListener("click", async event => {
+  const editButton = event.target.closest(".expense-edit");
+  const deleteButton = event.target.closest(".expense-delete");
+
+  if (editButton) {
+    const expense = EXPENSES.find(x => x._id === editButton.dataset.id);
+    if (!expense) return;
+    expenseEditId = expense._id;
+    $("expenseAmount").value = expense.amount;
+    $("expenseDate").value = expense.date || localDateKey();
+    $("expenseCategory").value = expense.category || "Other";
+    $("expenseMethod").value = expense.paymentMethod || "Cash";
+    $("expenseNote").value = expense.note || "";
+    $("expenseSave").textContent = "✏️ Update expense";
+    $("expenseAmount").focus();
+    return;
+  }
+
+  if (deleteButton) {
+    if (!confirm("Indha expense delete pannava?")) return;
+    try {
+      await api(`/expenses/${deleteButton.dataset.id}`, "DELETE");
+      toast("Expense deleted");
+      await loadExpenses();
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+});
+
+async function askMemoryAssistant(questionOverride) {
+  const input = $("assistantInput");
+  const answer = $("assistantAnswer");
+  const question = String(questionOverride || input.value || "").trim();
+
+  if (!question) {
+    alert("Question enter pannunga.");
+    return;
+  }
+
+  input.value = question;
+  answer.classList.remove("empty");
+  answer.textContent = "🧠 Thinking...";
+  $("assistantAsk").disabled = true;
+
+  try {
+    const result = await api("/assistant", "POST", { message: question });
+    answer.textContent = result.answer || "No answer available.";
+  } catch (error) {
+    answer.textContent = "Assistant error: " + error.message;
+  } finally {
+    $("assistantAsk").disabled = false;
+  }
+}
+
+$("assistantAsk").onclick = () => askMemoryAssistant();
+$("assistantInput").addEventListener("keydown", event => {
+  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+    askMemoryAssistant();
+  }
+});
+document.querySelectorAll("[data-ai-question]").forEach(button => {
+  button.onclick = () => askMemoryAssistant(button.dataset.aiQuestion);
+});
 
 </script>
 <footer class="copyright">
