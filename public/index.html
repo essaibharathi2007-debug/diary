@@ -1336,6 +1336,355 @@ textarea{
 
 }
 
+
+/* =====================================================
+   PREMIUM AI + EXPENSE UI — ONLY THESE TWO SECTIONS
+===================================================== */
+.ai-expense-grid{
+  display:grid;
+  grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
+  gap:20px;
+  margin:22px 0 18px;
+  align-items:stretch;
+}
+
+.feature-card{
+  position:relative;
+  overflow:hidden;
+  min-width:0;
+  padding:0;
+  border:1px solid rgba(92,220,231,.16);
+  border-radius:26px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(67,210,224,.12), transparent 28%),
+    linear-gradient(145deg, rgba(20,39,56,.98), rgba(10,24,38,.98));
+  box-shadow:0 22px 65px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.035);
+}
+
+.feature-card::before{
+  content:"";
+  position:absolute;
+  inset:0 0 auto 0;
+  height:1px;
+  background:linear-gradient(90deg,transparent,rgba(74,224,235,.75),rgba(130,103,255,.6),transparent);
+}
+
+.feature-card h3{
+  margin:0;
+  padding:23px 24px 0;
+  color:#f3fbfd;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:-.35px;
+}
+
+.feature-card .feature-sub{
+  margin:7px 24px 0;
+  color:#91a9b8;
+  font-size:12px;
+  line-height:1.6;
+}
+
+/* AI */
+.feature-card:first-child{
+  background:
+    radial-gradient(circle at 88% 0%, rgba(78,219,235,.16), transparent 32%),
+    radial-gradient(circle at 15% 100%, rgba(109,88,255,.08), transparent 35%),
+    linear-gradient(145deg,#14283a,#0b1b2b 70%);
+}
+
+.feature-card:first-child h3::before{
+  content:"✦";
+  display:inline-grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  margin-right:10px;
+  vertical-align:-7px;
+  border-radius:10px;
+  color:#fff;
+  font-size:14px;
+  background:linear-gradient(135deg,#27c9d8,#6e62ff);
+  box-shadow:0 8px 22px rgba(39,201,216,.22);
+}
+
+.ai-chat{
+  display:flex;
+  flex-direction:column;
+  gap:11px;
+  padding:20px 24px 24px;
+}
+
+#assistantInput{
+  min-height:126px;
+  resize:vertical;
+  border:1px solid rgba(99,206,221,.22);
+  border-radius:18px;
+  padding:16px 17px;
+  background:rgba(5,18,31,.72);
+  color:#eaf8fa;
+  font-size:13px;
+  line-height:1.6;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+}
+
+#assistantInput::placeholder{color:#637e8d}
+#assistantInput:focus{
+  border-color:#42d7e4;
+  box-shadow:0 0 0 3px rgba(66,215,228,.09),0 12px 30px rgba(0,0,0,.15);
+}
+
+.ai-chip-row{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+}
+
+.ai-chip{
+  min-height:40px;
+  border:1px solid rgba(112,145,163,.22);
+  border-radius:12px;
+  background:rgba(255,255,255,.035);
+  color:#b9cbd4;
+  padding:9px 10px;
+  font-size:11px;
+  font-weight:700;
+  transition:.2s ease;
+}
+
+.ai-chip:hover{
+  transform:translateY(-1px);
+  color:#f4ffff;
+  border-color:rgba(67,215,228,.55);
+  background:rgba(67,215,228,.08);
+}
+
+#assistantAsk{
+  width:100%;
+  min-height:46px;
+  border:0;
+  border-radius:14px;
+  background:linear-gradient(135deg,#27c9d8,#4e9df7 52%,#7662ff);
+  color:#fff;
+  font-weight:800;
+  font-size:13px;
+  letter-spacing:.1px;
+  box-shadow:0 12px 28px rgba(55,161,239,.22);
+  transition:.2s ease;
+}
+
+#assistantAsk:hover{
+  transform:translateY(-1px);
+  box-shadow:0 15px 32px rgba(55,161,239,.3);
+}
+
+#assistantAsk:disabled{opacity:.55;transform:none;cursor:wait}
+
+.ai-answer{
+  position:relative;
+  min-height:105px;
+  border:1px solid rgba(112,145,163,.18);
+  border-radius:16px;
+  padding:15px 16px 15px 42px;
+  background:rgba(3,14,25,.55);
+  color:#c8d9e0;
+  font-size:12px;
+  line-height:1.7;
+  white-space:pre-wrap;
+}
+
+.ai-answer::before{
+  content:"AI";
+  position:absolute;
+  left:13px;
+  top:14px;
+  width:22px;
+  height:22px;
+  display:grid;
+  place-items:center;
+  border-radius:7px;
+  background:rgba(56,210,224,.12);
+  color:#51dce6;
+  font-size:8px;
+  font-weight:900;
+  letter-spacing:.5px;
+}
+
+.ai-answer.empty{color:#6f8998}
+
+/* EXPENSE */
+.feature-card:nth-child(2){
+  background:
+    radial-gradient(circle at 100% 0%, rgba(72,220,180,.12), transparent 31%),
+    linear-gradient(145deg,#14283a,#0b1b2b 72%);
+}
+
+.feature-card:nth-child(2) h3::before{
+  content:"₹";
+  display:inline-grid;
+  place-items:center;
+  width:30px;
+  height:30px;
+  margin-right:10px;
+  vertical-align:-7px;
+  border-radius:10px;
+  color:#061a19;
+  font-size:14px;
+  font-weight:900;
+  background:linear-gradient(135deg,#48e0b4,#b7f38a);
+  box-shadow:0 8px 22px rgba(72,224,180,.18);
+}
+
+.expense-form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:11px;
+  padding:20px 24px 0;
+}
+
+.expense-form-grid .full{grid-column:1/-1}
+
+.feature-card:nth-child(2) .field{margin:0}
+.feature-card:nth-child(2) .field label{
+  margin:0 0 7px;
+  color:#7894a4;
+  font-size:10px;
+  font-weight:800;
+  letter-spacing:.5px;
+  text-transform:uppercase;
+}
+
+.feature-card:nth-child(2) input,
+.feature-card:nth-child(2) select{
+  min-height:43px;
+  border:1px solid rgba(112,145,163,.2);
+  border-radius:12px;
+  background:rgba(4,17,29,.7);
+  color:#edf8fa;
+  font-size:12px;
+}
+
+.feature-card:nth-child(2) input:focus,
+.feature-card:nth-child(2) select:focus{
+  border-color:#48e0b4;
+  box-shadow:0 0 0 3px rgba(72,224,180,.08);
+}
+
+#expenseAmount{
+  font-size:15px;
+  font-weight:700;
+}
+
+#expenseSave{
+  width:100%;
+  min-height:45px;
+  border:0;
+  border-radius:13px;
+  background:linear-gradient(135deg,#32d7ad,#55c98b);
+  color:#06231d;
+  font-weight:900;
+  box-shadow:0 12px 26px rgba(50,215,173,.16);
+  transition:.2s ease;
+}
+
+#expenseSave:hover{transform:translateY(-1px);box-shadow:0 15px 30px rgba(50,215,173,.23)}
+#expenseSave:disabled{opacity:.55;transform:none}
+
+.expense-summary{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:8px;
+  padding:20px 24px 0;
+  margin:0;
+}
+
+.expense-mini{
+  position:relative;
+  overflow:hidden;
+  min-height:76px;
+  border:1px solid rgba(112,145,163,.17);
+  border-radius:15px;
+  padding:13px 12px;
+  background:rgba(255,255,255,.035);
+}
+
+.expense-mini::after{
+  content:"";
+  position:absolute;
+  right:-18px;
+  bottom:-25px;
+  width:65px;
+  height:65px;
+  border-radius:50%;
+  background:rgba(72,224,180,.06);
+}
+
+.expense-mini b{
+  display:block;
+  margin-bottom:5px;
+  color:#effffc;
+  font-size:17px;
+  font-weight:900;
+  letter-spacing:-.3px;
+}
+
+.expense-mini span{
+  color:#7894a4;
+  font-size:9px;
+  font-weight:800;
+  letter-spacing:.9px;
+  text-transform:uppercase;
+}
+
+.expense-list{
+  display:grid;
+  gap:8px;
+  max-height:270px;
+  overflow:auto;
+  padding:14px 24px 24px;
+}
+
+.expense-list:empty{display:none}
+
+.expense-row{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto;
+  gap:12px;
+  align-items:center;
+  border:1px solid rgba(112,145,163,.15);
+  border-radius:15px;
+  padding:12px 13px;
+  background:rgba(255,255,255,.025);
+  transition:.2s ease;
+}
+
+.expense-row:hover{
+  border-color:rgba(72,224,180,.32);
+  background:rgba(72,224,180,.045);
+}
+
+.expense-row-main{min-width:0}
+.expense-row-title{font-weight:800;font-size:12px;color:#dcebef}
+.expense-row-meta{font-size:10px;color:#718b9a;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.expense-row-amount{font-weight:900;font-size:14px;color:#6ee7bd;white-space:nowrap}
+.expense-row-actions{display:flex;gap:5px;margin-top:7px}
+.expense-row-actions button{padding:5px 8px;font-size:9px}
+
+@media(max-width:850px){
+  .ai-expense-grid{grid-template-columns:1fr}
+}
+
+@media(max-width:600px){
+  .feature-card h3{padding-left:17px;padding-right:17px}
+  .feature-card .feature-sub{margin-left:17px;margin-right:17px}
+  .ai-chat,.expense-form-grid{padding-left:17px;padding-right:17px}
+  .expense-summary{padding-left:17px;padding-right:17px}
+  .expense-list{padding-left:17px;padding-right:17px}
+  .ai-chip-row{grid-template-columns:1fr}
+  .expense-form-grid,.expense-summary{grid-template-columns:1fr}
+  .expense-form-grid .full{grid-column:auto}
+}
+
 </style>
 </head>
 
@@ -1691,186 +2040,92 @@ textarea{
 
 <!-- =====================================================
      AI MEMORY ASSISTANT + DAILY EXPENSE TRACKER
-     Professional UI. Existing IDs preserved for JS.
 ===================================================== -->
-<section class="ai-expense-premium">
+<section class="ai-expense-grid">
 
-  <!-- AI MEMORY ASSISTANT -->
-  <div class="premium-feature ai-premium-card">
-    <div class="premium-topline ai-topline"></div>
-
-    <div class="premium-header">
-      <div class="premium-icon ai-icon">✦</div>
-      <div class="premium-heading-copy">
-        <div class="premium-eyebrow">PRIVATE INTELLIGENCE</div>
-        <h3>AI Memory Assistant</h3>
-        <p>Your private assistant for memories, diary entries and spending.</p>
-      </div>
-      <div class="ai-status"><span></span> READY</div>
+  <div class="feature-card">
+    <h3>🤖 AI Memory Assistant</h3>
+    <div class="feature-sub">
+      Ask about your saved memories or spending. If OPENAI_API_KEY is configured, this uses AI; otherwise a private local assistant answers from your saved data.
     </div>
 
-    <div class="ai-command-box">
-      <div class="ai-command-head">
-        <div>
-          <span class="command-label">ASK YOUR MEMORY</span>
-          <span class="command-caption">Search your saved memories & spending</span>
-        </div>
-        <span class="keyboard-hint">⌘ / Ctrl + Enter</span>
+    <div class="ai-chat">
+      <textarea id="assistantInput" rows="3" placeholder="Example: How much did I spend today? / Show my recent memories..."></textarea>
+
+      <div class="ai-chip-row">
+        <button class="ai-chip" data-ai-question="How much did I spend today?">💰 Today's spending</button>
+        <button class="ai-chip" data-ai-question="How much did I spend this month?">📅 This month</button>
+        <button class="ai-chip" data-ai-question="Show my recent memories.">🧠 Recent memories</button>
       </div>
 
-      <div class="ai-textarea-wrap">
-        <textarea id="assistantInput" rows="4" placeholder="Ask anything...  e.g. How much did I spend this month?"></textarea>
-        <div class="ai-input-glow"></div>
-      </div>
-
-      <div class="ai-actions-row">
-        <div class="ai-quick-actions">
-          <button class="premium-chip" data-ai-question="How much did I spend today?">
-            <span>₹</span> Today
-          </button>
-          <button class="premium-chip" data-ai-question="How much did I spend this month?">
-            <span>▦</span> This month
-          </button>
-          <button class="premium-chip" data-ai-question="Show my recent memories.">
-            <span>✦</span> Memories
-          </button>
-        </div>
-        <button class="premium-ai-button" id="assistantAsk">
-          <span>Ask Assistant</span><b>↗</b>
-        </button>
-      </div>
-    </div>
-
-    <div class="ai-response-card">
-      <div class="response-head">
-        <div class="response-avatar">✦</div>
-        <div>
-          <strong>Memory insight</strong>
-          <span>Based on your saved data</span>
-        </div>
-        <div class="response-dot"></div>
-      </div>
-      <div id="assistantAnswer" class="ai-answer empty">Ask a question to get a private insight from your saved memories.</div>
+      <button class="primary" id="assistantAsk">✨ Ask Memory Assistant</button>
+      <div id="assistantAnswer" class="ai-answer empty">Your assistant response will appear here.</div>
     </div>
   </div>
 
-  <!-- DAILY EXPENSE TRACKER -->
-  <div class="premium-feature expense-premium-card">
-    <div class="premium-topline expense-topline"></div>
-
-    <div class="premium-header expense-header">
-      <div class="premium-icon expense-icon">₹</div>
-      <div class="premium-heading-copy">
-        <div class="premium-eyebrow expense-eyebrow">PERSONAL FINANCE</div>
-        <h3>Daily Expense Tracker</h3>
-        <p>Keep every rupee organized with a simple daily record.</p>
-      </div>
-      <div class="tracking-badge"><span></span> TRACKING</div>
+  <div class="feature-card">
+    <h3>💸 Daily Expense Tracker</h3>
+    <div class="feature-sub">
+      Daily evlo selavu pannen-nu amount, category, note and payment method save pannunga. MongoDB-la account-wise store aagum.
     </div>
 
-    <div class="expense-premium-layout">
-      <div class="expense-entry-panel">
-        <div class="panel-title">
-          <div>
-            <strong>Add an expense</strong>
-            <span>Record what you spent today</span>
-          </div>
-          <div class="panel-number">01</div>
-        </div>
-
-        <div class="expense-form-grid premium-expense-form">
-          <div class="field premium-field">
-            <label>Amount</label>
-            <div class="input-with-prefix">
-              <span>₹</span>
-              <input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="0.00">
-            </div>
-          </div>
-
-          <div class="field premium-field">
-            <label>Date</label>
-            <input id="expenseDate" type="date">
-          </div>
-
-          <div class="field premium-field">
-            <label>Category</label>
-            <select id="expenseCategory">
-              <option>Food</option>
-              <option>Travel</option>
-              <option>Shopping</option>
-              <option>Bills</option>
-              <option>Education</option>
-              <option>Health</option>
-              <option>Entertainment</option>
-              <option>Other</option>
-            </select>
-          </div>
-
-          <div class="field premium-field">
-            <label>Payment method</label>
-            <select id="expenseMethod">
-              <option>Cash</option>
-              <option>UPI</option>
-              <option>Card</option>
-              <option>Bank Transfer</option>
-              <option>Other</option>
-            </select>
-          </div>
-
-          <div class="field full premium-field">
-            <label>Note <span>Optional</span></label>
-            <input id="expenseNote" placeholder="Lunch, bus, college, coffee...">
-          </div>
-
-          <div class="full expense-save-wrap">
-            <button class="premium-expense-button" id="expenseSave">
-              <span>＋</span> Save expense
-              <b>↗</b>
-            </button>
-          </div>
-        </div>
+    <div class="expense-form-grid">
+      <div class="field">
+        <label>Amount (₹)</label>
+        <input id="expenseAmount" type="number" min="0.01" step="0.01" placeholder="250">
       </div>
 
-      <div class="expense-overview-panel">
-        <div class="panel-title overview-title">
-          <div>
-            <strong>Spending overview</strong>
-            <span>Your saved expense summary</span>
-          </div>
-          <div class="overview-mark">₹</div>
-        </div>
+      <div class="field">
+        <label>Date</label>
+        <input id="expenseDate" type="date">
+      </div>
 
-        <div class="expense-summary premium-summary">
-          <div class="expense-mini premium-stat today-stat">
-            <div class="stat-icon">◷</div>
-            <span>Today</span>
-            <b id="expenseTodayTotal">₹0.00</b>
-            <small>Spent today</small>
-          </div>
-          <div class="expense-mini premium-stat month-stat">
-            <div class="stat-icon">▦</div>
-            <span>This month</span>
-            <b id="expenseMonthTotal">₹0.00</b>
-            <small>Current month</small>
-          </div>
-          <div class="expense-mini premium-stat all-stat">
-            <div class="stat-icon">↗</div>
-            <span>All recorded</span>
-            <b id="expenseAllTotal">₹0.00</b>
-            <small>Total spending</small>
-          </div>
-        </div>
+      <div class="field">
+        <label>Category</label>
+        <select id="expenseCategory">
+          <option>Food</option>
+          <option>Travel</option>
+          <option>Shopping</option>
+          <option>Bills</option>
+          <option>Education</option>
+          <option>Health</option>
+          <option>Entertainment</option>
+          <option>Other</option>
+        </select>
+      </div>
 
-        <div class="recent-expenses-head">
-          <span>Recent expenses</span>
-          <span>Latest 30</span>
-        </div>
-        <div id="expenseList" class="expense-list premium-expense-list"></div>
+      <div class="field">
+        <label>Payment</label>
+        <select id="expenseMethod">
+          <option>Cash</option>
+          <option>UPI</option>
+          <option>Card</option>
+          <option>Bank Transfer</option>
+          <option>Other</option>
+        </select>
+      </div>
+
+      <div class="field full">
+        <label>Note</label>
+        <input id="expenseNote" placeholder="Lunch, bus, college, coffee...">
+      </div>
+
+      <div class="full">
+        <button class="primary" id="expenseSave">💾 Save expense</button>
       </div>
     </div>
+
+    <div class="expense-summary">
+      <div class="expense-mini"><b id="expenseTodayTotal">₹0</b><span>Today</span></div>
+      <div class="expense-mini"><b id="expenseMonthTotal">₹0</b><span>This month</span></div>
+      <div class="expense-mini"><b id="expenseAllTotal">₹0</b><span>All recorded</span></div>
+    </div>
+
+    <div id="expenseList" class="expense-list"></div>
   </div>
 
 </section>
+
 
 <!-- =====================================================
      PROFILE
@@ -4011,224 +4266,91 @@ function buildReportHTML() {
   }
 
 /* =====================================================
-   AI MEMORY ASSISTANT + EXPENSE TRACKER — PREMIUM UI
-   Only these two feature sections are styled here.
+   AI MEMORY ASSISTANT + EXPENSE TRACKER
 ===================================================== */
-.ai-expense-premium{
+.ai-expense-grid{
   display:grid;
-  gap:20px;
-  margin-top:20px;
+  grid-template-columns:1.1fr .9fr;
+  gap:18px;
+  margin-top:18px;
 }
-
-.premium-feature{
-  position:relative;
-  overflow:hidden;
-  border:1px solid color-mix(in srgb,var(--line) 92%,var(--acc));
-  background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb,var(--acc) 8%,transparent), transparent 30%),
-    linear-gradient(145deg,color-mix(in srgb,var(--card) 97%,var(--acc) 3%),var(--card));
-  border-radius:28px;
-  padding:25px;
-  box-shadow:0 22px 60px rgba(0,0,0,.13);
-}
-
-[data-theme="dark"] .premium-feature{
-  background:
-    radial-gradient(circle at 100% 0%, color-mix(in srgb,var(--acc) 9%,transparent), transparent 32%),
-    linear-gradient(145deg,#101f30,#0d1a28);
-  border-color:#263b4f;
-}
-
-.premium-topline{
-  position:absolute;
-  top:0;left:0;right:0;height:3px;
-  background:linear-gradient(90deg,var(--acc),#8b5cf6,transparent 78%);
-}
-
-.expense-topline{
-  background:linear-gradient(90deg,#20b26b,var(--acc),transparent 78%);
-}
-
-.premium-header{
-  display:flex;
-  align-items:center;
-  gap:14px;
-  margin-bottom:20px;
-}
-
-.premium-icon{
-  width:52px;height:52px;
-  flex:0 0 52px;
-  display:grid;place-items:center;
-  border-radius:17px;
-  font-size:23px;font-weight:900;
-  color:#fff;
-  background:linear-gradient(145deg,#25c9d7,#6d5dfc);
-  box-shadow:0 12px 28px color-mix(in srgb,var(--acc) 20%,transparent);
-}
-
-.expense-icon{
-  background:linear-gradient(145deg,#19b66b,#0fa3b1);
-  box-shadow:0 12px 28px rgba(25,182,107,.18);
-}
-
-.premium-heading-copy{min-width:0}
-.premium-eyebrow{
-  font-size:9px;letter-spacing:1.5px;font-weight:900;
-  color:var(--acc);margin-bottom:3px;
-}
-.expense-eyebrow{color:#19a963}
-.premium-heading-copy h3{
-  margin:0;font-size:23px;letter-spacing:-.45px;
-}
-.premium-heading-copy p{
-  margin:4px 0 0;color:var(--mut);font-size:12px;line-height:1.5;
-}
-
-.ai-status,.tracking-badge{
-  margin-left:auto;
-  display:flex;align-items:center;gap:7px;
-  border:1px solid color-mix(in srgb,var(--acc) 28%,var(--line));
-  color:var(--acc);background:color-mix(in srgb,var(--acc) 7%,var(--card));
-  padding:7px 10px;border-radius:999px;
-  font-size:9px;font-weight:900;letter-spacing:.8px;
-}
-.ai-status span,.tracking-badge span{
-  width:6px;height:6px;border-radius:50%;background:var(--acc);
-  box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 12%,transparent);
-}
-.tracking-badge{color:#19a963;border-color:color-mix(in srgb,#19a963 28%,var(--line));background:color-mix(in srgb,#19a963 7%,var(--card));}
-.tracking-badge span{background:#19a963;box-shadow:0 0 0 4px rgba(25,169,99,.11)}
-
-.ai-command-box{
-  border:1px solid #2a4256;
+.feature-card{
+  border:1px solid var(--line);
+  background:var(--card);
   border-radius:22px;
-  padding:15px;
-  background:color-mix(in srgb,var(--bg) 76%,var(--card));
+  padding:20px;
+  box-shadow:0 12px 35px rgba(0,0,0,.08);
 }
-
-.ai-command-head{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  margin:0 2px 10px;
+.feature-card h3{margin:0 0 5px;font-size:18px}
+.feature-sub{color:var(--mut);font-size:12px;line-height:1.5;margin-bottom:16px}
+.expense-form-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
 }
-.command-label{display:block;font-size:10px;font-weight:900;letter-spacing:1px;color:var(--ink)}
-.command-caption{display:block;color:var(--mut);font-size:10px;margin-top:2px}
-.keyboard-hint{font-size:9px;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:5px 7px;white-space:nowrap}
-
-.ai-textarea-wrap{position:relative}
-.ai-textarea-wrap textarea{
-  position:relative;z-index:1;
-  min-height:112px;max-height:180px;
-  padding:15px 16px;
-  border-radius:16px;
-  border:1px solid #304b61;
-  background:#0c1c2d;
-  color:#eef8ff;
-  resize:vertical;
+.expense-form-grid .full{grid-column:1/-1}
+.expense-summary{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:8px;
+  margin:14px 0;
 }
-.ai-textarea-wrap textarea::placeholder{color:#6f8496}
-.ai-textarea-wrap textarea:focus{
-  border-color:var(--acc);
-  box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 10%,transparent),0 10px 30px rgba(0,0,0,.12);
+.expense-mini{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:12px;
+  background:rgba(255,255,255,.025);
 }
-.ai-input-glow{position:absolute;inset:30% 20% -10px;filter:blur(25px);background:color-mix(in srgb,var(--acc) 9%,transparent);pointer-events:none}
-
-.ai-actions-row{display:flex;align-items:center;gap:12px;margin-top:12px}
-.ai-quick-actions{display:flex;gap:7px;flex-wrap:wrap;flex:1}
-.premium-chip{
-  display:inline-flex;align-items:center;gap:7px;
-  border:1px solid #2b4357;background:transparent;color:var(--ink);
-  border-radius:11px;padding:9px 11px;font-size:11px;font-weight:800;
-  transition:.18s ease;
+.expense-mini b{display:block;font-size:18px}
+.expense-mini span{font-size:10px;color:var(--mut)}
+.expense-list{display:grid;gap:8px;max-height:330px;overflow:auto}
+.expense-row{
+  display:grid;
+  grid-template-columns:1fr auto;
+  gap:10px;
+  align-items:center;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:11px 12px;
 }
-.premium-chip span{color:var(--acc);font-weight:900}
-.premium-chip:hover{transform:translateY(-1px);border-color:var(--acc);background:color-mix(in srgb,var(--acc) 7%,var(--card))}
-
-.premium-ai-button{
-  flex:0 0 auto;min-height:44px;padding:0 15px;
-  display:flex;align-items:center;gap:12px;
-  border:0;border-radius:13px;color:#fff;font-weight:900;
-  background:linear-gradient(135deg,#17b9c8,#655cf2);
-  box-shadow:0 10px 24px rgba(31,170,194,.18);
-}
-.premium-ai-button b{font-size:16px}
-.premium-ai-button:hover{transform:translateY(-1px)}
-
-.ai-response-card{
-  margin-top:14px;padding:14px 15px;
-  border:1px solid #263f54;border-radius:20px;
-  background:color-mix(in srgb,var(--bg) 58%,var(--card));
-}
-.response-head{display:flex;align-items:center;gap:9px;margin-bottom:8px}
-.response-avatar{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;color:var(--acc);background:color-mix(in srgb,var(--acc) 10%,var(--card));border:1px solid color-mix(in srgb,var(--acc) 22%,var(--line));font-size:13px}
-.response-head strong{display:block;font-size:11px}
-.response-head span{display:block;color:var(--mut);font-size:9px;margin-top:1px}
-.response-dot{margin-left:auto;width:6px;height:6px;border-radius:50%;background:#20b26b;box-shadow:0 0 0 4px rgba(32,178,107,.09)}
+.expense-row-main{min-width:0}
+.expense-row-title{font-weight:800;font-size:13px}
+.expense-row-meta{font-size:10px;color:var(--mut);margin-top:3px}
+.expense-row-amount{font-weight:900;font-size:15px;white-space:nowrap}
+.expense-row-actions{display:flex;gap:5px;margin-top:6px}
+.expense-row-actions button{padding:5px 8px;font-size:10px}
+.ai-chat{display:flex;flex-direction:column;gap:10px}
 .ai-answer{
-  min-height:58px;white-space:pre-wrap;border:0;border-radius:12px;
-  padding:7px 2px 2px;font-size:12px;line-height:1.65;color:var(--ink);background:transparent;
+  min-height:120px;
+  white-space:pre-wrap;
+  border:1px solid var(--line);
+  border-radius:16px;
+  padding:14px;
+  font-size:13px;
+  line-height:1.6;
+  color:var(--ink);
+  background:rgba(255,255,255,.025);
 }
 .ai-answer.empty{color:var(--mut)}
-
-.expense-premium-layout{
-  display:grid;grid-template-columns:minmax(0,.95fr) minmax(0,1.05fr);gap:18px;
+.ai-chip-row{display:flex;gap:7px;flex-wrap:wrap}
+.ai-chip{
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--ink);
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:10px;
+  cursor:pointer;
 }
-.expense-entry-panel,.expense-overview-panel{
-  border:1px solid #293f52;border-radius:21px;padding:17px;
-  background:color-mix(in srgb,var(--bg) 55%,var(--card));
+.ai-chip:hover{border-color:var(--acc)}
+@media(max-width:850px){
+  .ai-expense-grid{grid-template-columns:1fr}
 }
-.panel-title{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:15px}
-.panel-title strong{display:block;font-size:13px}
-.panel-title span{display:block;color:var(--mut);font-size:9px;margin-top:3px}
-.panel-number,.overview-mark{font-size:10px;font-weight:900;color:var(--mut);border:1px solid var(--line);padding:6px 8px;border-radius:8px}
-.overview-mark{font-size:13px;color:#19a963;border-color:rgba(25,169,99,.22);background:rgba(25,169,99,.06)}
-
-.premium-expense-form{display:grid;grid-template-columns:1fr 1fr;gap:11px}
-.premium-field{margin:0!important}
-.premium-field label{display:flex;justify-content:space-between;align-items:center;font-size:9px;text-transform:uppercase;letter-spacing:.8px;color:var(--mut);font-weight:900;margin-bottom:6px}
-.premium-field label span{font-size:8px;text-transform:none;letter-spacing:0;font-weight:600}
-.input-with-prefix{position:relative}
-.input-with-prefix>span{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:13px;font-weight:900;color:#19a963;z-index:2}
-.input-with-prefix input{padding-left:30px!important}
-.premium-expense-form input,.premium-expense-form select{height:43px;min-height:43px;border-radius:12px;background:color-mix(in srgb,var(--bg) 72%,var(--card));border-color:#2a4256}
-.premium-expense-form input:focus,.premium-expense-form select:focus{border-color:#19a963;box-shadow:0 0 0 3px rgba(25,169,99,.08)}
-.premium-expense-form .full{grid-column:1/-1}
-.expense-save-wrap{margin-top:2px}
-.premium-expense-button{width:100%;height:44px;border:0;border-radius:12px;background:linear-gradient(135deg,#18ad68,#0fa3b1);color:#fff;font-weight:900;display:flex;align-items:center;justify-content:center;gap:9px;box-shadow:0 10px 24px rgba(24,173,104,.16)}
-.premium-expense-button span{font-size:18px}.premium-expense-button b{margin-left:auto;margin-right:13px;font-size:14px}.premium-expense-button:hover{filter:brightness(1.06);transform:translateY(-1px)}
-
-.premium-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:0 0 15px}
-.premium-stat{position:relative;min-height:117px;border:1px solid #293f52;border-radius:17px;padding:12px;background:linear-gradient(145deg,color-mix(in srgb,var(--card) 94%,#19a963 6%),color-mix(in srgb,var(--bg) 65%,var(--card)));overflow:hidden}
-.premium-stat::after{content:"";position:absolute;width:65px;height:65px;right:-25px;bottom:-25px;border-radius:50%;background:color-mix(in srgb,#19a963 8%,transparent)}
-.stat-icon{width:26px;height:26px;display:grid;place-items:center;border-radius:8px;background:rgba(25,169,99,.08);color:#19a963;font-size:12px;margin-bottom:10px}
-.premium-stat span{display:block;font-size:9px;text-transform:uppercase;letter-spacing:.55px;color:var(--mut);font-weight:900}
-.premium-stat b{display:block;font-size:17px;margin-top:4px;letter-spacing:-.3px}
-.premium-stat small{display:block;color:var(--mut);font-size:8px;margin-top:4px}
-
-.recent-expenses-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;padding:0 2px}
-.recent-expenses-head span:first-child{font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.7px}
-.recent-expenses-head span:last-child{font-size:9px;color:var(--mut)}
-.premium-expense-list{display:grid;gap:7px;max-height:245px;overflow:auto;padding-right:2px}
-.premium-expense-list:empty{display:none}
-.premium-expense-list .expense-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border:1px solid #263d50;border-radius:13px;padding:10px 11px;background:color-mix(in srgb,var(--bg) 50%,var(--card))}
-.premium-expense-list .expense-row-title{font-size:11px;font-weight:900}
-.premium-expense-list .expense-row-meta{font-size:8px;color:var(--mut);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.premium-expense-list .expense-row-amount{font-size:12px;font-weight:900;color:#19a963}
-.premium-expense-list .expense-row-actions{display:flex;gap:5px;margin-top:5px}
-.premium-expense-list .expense-row-actions button{padding:4px 7px;font-size:8px;border-radius:7px}
-
-@media(max-width:900px){
-  .expense-premium-layout{grid-template-columns:1fr}
+@media(max-width:600px){
+  .expense-form-grid,.expense-summary{grid-template-columns:1fr}
+  .expense-form-grid .full{grid-column:auto}
 }
-@media(max-width:650px){
-  .premium-feature{padding:17px;border-radius:22px}
-  .premium-header{align-items:flex-start}.premium-icon{width:45px;height:45px;flex-basis:45px;border-radius:14px}
-  .premium-heading-copy h3{font-size:19px}.premium-heading-copy p{font-size:10px}.ai-status,.tracking-badge{display:none}
-  .ai-command-head{align-items:flex-start;flex-direction:column}.keyboard-hint{display:none}
-  .ai-actions-row{align-items:stretch;flex-direction:column}.premium-ai-button{width:100%;justify-content:center}
-  .premium-expense-form{grid-template-columns:1fr}.premium-expense-form .full{grid-column:auto}
-  .premium-summary{grid-template-columns:1fr 1fr}.premium-stat:last-child{grid-column:1/-1}
-}
+
 </style>
 </head>
 <body>
