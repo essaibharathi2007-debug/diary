@@ -2624,6 +2624,7 @@ let photoData = {
   message: [],
   activity: []
 };
+let swRegistrationPromise = null;
 
 /* =====================================================
    API
@@ -3057,6 +3058,24 @@ function renderReminderUI() {
   $("remStatus").textContent = reminderStatusText();
 }
 
+/* Wait for the service worker to be ready to receive showNotification
+   calls. Uses the registration promise captured at page-load, with a
+   generous timeout so a slow mobile network doesn't fail this early. */
+async function getReadyRegistration() {
+  if (!("serviceWorker" in navigator)) return null;
+
+  try {
+    if (swRegistrationPromise) await swRegistrationPromise;
+
+    return await Promise.race([
+      navigator.serviceWorker.ready,
+      new Promise((_, reject) => setTimeout(() => reject(new Error("sw-timeout")), 8000))
+    ]);
+  } catch (_) {
+    return null;
+  }
+}
+
 /* Actually show a notification - tries the service worker first
    (works even if the tab/app is backgrounded), then falls back to
    a plain Notification, and reports back whether it truly fired so
@@ -3078,27 +3097,37 @@ async function fireReminderNotification(body, tag) {
     return { ok: false, reason: "Permission granted illa." };
   }
 
-  try {
-    if ("serviceWorker" in navigator) {
-      try {
-        const reg = await Promise.race([
-          navigator.serviceWorker.ready,
-          new Promise((_, reject) => setTimeout(() => reject(new Error("sw-timeout")), 3000))
-        ]);
-        if (reg) {
-          await reg.showNotification(title, options);
-          return { ok: true };
-        }
-      } catch (_) {
-        /* service worker not ready in time - fall through to plain Notification */
-      }
-    }
+  const reg = await getReadyRegistration();
 
+  if (reg) {
+    /* Mobile browsers (Android Chrome included) REQUIRE this path once
+       a service worker controls the page - "new Notification()" throws
+       "Illegal constructor" there. So whenever a service worker is
+       available, always use it and never fall through to the raw
+       constructor below. */
+    try {
+      await reg.showNotification(title, options);
+      return { ok: true };
+    } catch (error) {
+      console.warn("showNotification failed:", error);
+      return {
+        ok: false,
+        reason: "Notification anupa mudiyala. App-a fully close pannitu thirumba open pannunga (service worker refresh aagum)."
+      };
+    }
+  }
+
+  /* No service worker at all (very old/unsupported browser) - only
+     here is the raw constructor safe to use. */
+  try {
     new Notification(title, options);
     return { ok: true };
   } catch (error) {
-    console.warn("Reminder notification failed:", error);
-    return { ok: false, reason: error.message || "Notification fail aachu." };
+    console.warn("Notification() failed:", error);
+    return {
+      ok: false,
+      reason: "Notification service ippo ready illa. Konja neram kaathu app-a refresh pannitu try pannunga."
+    };
   }
 }
 
@@ -4061,8 +4090,9 @@ if (T) {
 /* Register service worker for PWA install support (safe no-op for API calls). */
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((err) => {
+    swRegistrationPromise = navigator.serviceWorker.register("/sw.js").catch((err) => {
       console.warn("SW registration failed:", err);
+      return null;
     });
   });
 }
