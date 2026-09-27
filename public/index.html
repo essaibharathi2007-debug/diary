@@ -1336,235 +1336,6 @@ textarea{
 
 }
 
-
-
-/* =====================================================
-   MEMORY SIGNATURE — PREMIUM CARD
-===================================================== */
-.memory-signature {
-  position: relative;
-  overflow: hidden;
-  border: 1px solid rgba(79, 209, 224, .24);
-  background:
-    radial-gradient(circle at 92% 8%, rgba(42, 196, 212, .16), transparent 30%),
-    radial-gradient(circle at 5% 100%, rgba(120, 86, 255, .13), transparent 34%),
-    linear-gradient(145deg, rgba(16, 31, 45, .98), rgba(8, 18, 29, .98));
-  box-shadow: 0 22px 55px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
-  border-radius: 24px;
-  padding: 0;
-  margin-bottom: 18px;
-}
-
-.memory-signature::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(120deg, transparent 20%, rgba(255,255,255,.055) 45%, transparent 68%);
-  transform: translateX(-120%);
-  transition: transform .8s ease;
-}
-
-.memory-signature:hover::before { transform: translateX(120%); }
-
-.memory-signature-top {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:14px;
-  padding:18px 20px 14px;
-  border-bottom:1px solid rgba(255,255,255,.08);
-}
-
-.memory-brand {
-  display:flex;
-  align-items:center;
-  gap:10px;
-  min-width:0;
-}
-
-.memory-emblem {
-  width:38px;
-  height:38px;
-  border-radius:12px;
-  display:grid;
-  place-items:center;
-  flex:0 0 auto;
-  font-size:18px;
-  background:linear-gradient(135deg,#19b9c8,#6d65ff);
-  box-shadow:0 8px 24px rgba(25,185,200,.22);
-}
-
-.memory-brand-text { min-width:0; }
-.memory-brand-name {
-  font-size:11px;
-  letter-spacing:2px;
-  font-weight:800;
-  color:#dcecf0;
-  text-transform:uppercase;
-}
-.memory-brand-sub {
-  margin-top:3px;
-  font-size:10px;
-  color:#7e99a8;
-  letter-spacing:.7px;
-}
-
-.memory-id {
-  font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;
-  font-size:10px;
-  color:#8ea9b6;
-  white-space:nowrap;
-}
-
-.memory-signature-body { padding:22px 20px 18px; }
-
-.memory-signature-kicker {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:12px;
-}
-
-.memory-kicker {
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:2.4px;
-  color:#54d7e2;
-  text-transform:uppercase;
-}
-
-.memory-secure {
-  display:inline-flex;
-  align-items:center;
-  gap:5px;
-  border:1px solid rgba(75,225,190,.25);
-  background:rgba(52,210,175,.08);
-  color:#70e7c5;
-  border-radius:999px;
-  padding:5px 8px;
-  font-size:9px;
-  font-weight:800;
-  letter-spacing:1px;
-  white-space:nowrap;
-}
-
-.memory-title {
-  margin:0;
-  font-size:22px;
-  line-height:1.15;
-  letter-spacing:-.45px;
-  color:#f2fbfd;
-  word-break:break-word;
-}
-
-.memory-quote {
-  margin:12px 0 0;
-  color:#a9bbc4;
-  line-height:1.72;
-  font-size:13px;
-  white-space:pre-wrap;
-  word-break:break-word;
-}
-
-.memory-quote::before { content:'“'; color:#43d1dc; font-size:20px; margin-right:2px; }
-.memory-quote::after { content:'”'; color:#43d1dc; font-size:20px; margin-left:2px; }
-
-.memory-meta-grid {
-  display:grid;
-  grid-template-columns:repeat(3,minmax(0,1fr));
-  gap:9px;
-  margin-top:19px;
-}
-
-.memory-meta-item {
-  min-width:0;
-  padding:10px 11px;
-  border-radius:13px;
-  border:1px solid rgba(255,255,255,.07);
-  background:rgba(255,255,255,.035);
-}
-
-.memory-meta-label {
-  display:block;
-  font-size:8px;
-  text-transform:uppercase;
-  letter-spacing:1.2px;
-  color:#718895;
-  margin-bottom:4px;
-}
-
-.memory-meta-value {
-  display:block;
-  font-size:11px;
-  color:#d7e6eb;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-.memory-signature-footer {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  padding:13px 20px 15px;
-  border-top:1px solid rgba(255,255,255,.07);
-}
-
-.memory-date {
-  color:#78919e;
-  font-size:10px;
-}
-
-.memory-seal {
-  display:flex;
-  align-items:center;
-  gap:7px;
-  color:#8da5b1;
-  font-size:9px;
-  letter-spacing:1px;
-  text-transform:uppercase;
-}
-
-.memory-seal-dot {
-  width:7px;
-  height:7px;
-  border-radius:50%;
-  background:#49dfbd;
-  box-shadow:0 0 12px rgba(73,223,189,.7);
-}
-
-.memory-actions {
-  display:flex;
-  flex-wrap:wrap;
-  gap:8px;
-  padding:0 20px 19px;
-}
-
-.memory-actions .ghost { background:rgba(255,255,255,.035); }
-
-[data-theme="light"] .memory-signature {
-  background:linear-gradient(145deg,#ffffff,#eef8fa);
-  border-color:rgba(15,163,177,.22);
-  box-shadow:0 18px 45px rgba(20,60,70,.12);
-}
-[data-theme="light"] .memory-brand-name,
-[data-theme="light"] .memory-title { color:#152b35; }
-[data-theme="light"] .memory-brand-sub,
-[data-theme="light"] .memory-id,
-[data-theme="light"] .memory-quote,
-[data-theme="light"] .memory-date { color:#607783; }
-[data-theme="light"] .memory-meta-item { background:rgba(15,163,177,.045); border-color:rgba(15,80,90,.08); }
-[data-theme="light"] .memory-meta-value { color:#25434d; }
-
-@media (max-width:650px) {
-  .memory-meta-grid { grid-template-columns:1fr; }
-  .memory-signature-top,
-  .memory-signature-footer { align-items:flex-start; }
-  .memory-id { max-width:130px; overflow:hidden; text-overflow:ellipsis; }
-}
 </style>
 </head>
 
@@ -1727,7 +1498,11 @@ textarea{
 
       <input
         id="typed"
+        type="password"
         placeholder="Voice work aagala? Type pannunga"
+        autocomplete="off"
+        autocapitalize="none"
+        spellcheck="false"
       >
 
       <button
@@ -3691,23 +3466,6 @@ function filteredEntries() {
   });
 }
 
-function memorySignatureId(entry) {
-  const raw = String(entry?._id || "").replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
-  return `CD-${new Date(entry?.createdAt || Date.now()).getFullYear()}-${(raw.slice(-6) || "000000")}`;
-}
-
-function memoryTypeInfo(type) {
-  if (type === "message") return { icon: "💬", label: "Message" };
-  if (type === "activity") return { icon: "✅", label: "Activity" };
-  return { icon: "📔", label: "Diary" };
-}
-
-function memoryPreview(text) {
-  const clean = String(text || "").trim();
-  if (!clean) return "A private moment saved in your personal archive.";
-  return clean.length > 230 ? clean.slice(0, 230).trimEnd() + "…" : clean;
-}
-
 function renderEntries() {
   const list = $("list");
   const items = filteredEntries();
@@ -3723,65 +3481,21 @@ function renderEntries() {
 
   list.innerHTML = items.map(entry => {
     const type = entry.type || "diary";
-    const info = memoryTypeInfo(type);
-    const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" }) : "";
+    const label = type === "message" ? "💬 Message" : type === "activity" ? "✅ Activity" : "📔 Diary";
+    const date = entry.createdAt ? new Date(entry.createdAt).toLocaleString() : "";
     const tags = (entry.tags || []).map(tag => `<span class="tag">${escapeHTML(tag)}</span>`).join("");
     const photos = (entry.photos || []).map(src => `
       <img src="${escapeHTML(src)}" alt="photo" data-photo="${escapeHTML(src)}">
     `).join("");
-    const mood = entry.mood || "Not specified";
-    const photoCount = (entry.photos || []).length;
-    const title = entry.title || "Untitled Memory";
-    const preview = memoryPreview(entry.text);
 
     return `
-      <article class="memory-signature" data-id="${escapeHTML(entry._id)}">
-
-        <div class="memory-signature-top">
-          <div class="memory-brand">
-            <div class="memory-emblem">${info.icon}</div>
-            <div class="memory-brand-text">
-              <div class="memory-brand-name">Cool Diary</div>
-              <div class="memory-brand-sub">Personal Memory Signature · ${info.label}</div>
-            </div>
-          </div>
-          <div class="memory-id">${escapeHTML(memorySignatureId(entry))}</div>
-        </div>
-
-        <div class="memory-signature-body">
-          <div class="memory-signature-kicker">
-            <span class="memory-kicker">Memory Signature</span>
-            <span class="memory-secure">🔐 ENCRYPTED AT REST</span>
-          </div>
-
-          <h3 class="memory-title">${escapeHTML(title)}</h3>
-          <p class="memory-quote">${escapeHTML(preview)}</p>
-
-          <div class="memory-meta-grid">
-            <div class="memory-meta-item">
-              <span class="memory-meta-label">Mood</span>
-              <span class="memory-meta-value">${escapeHTML(mood)}</span>
-            </div>
-            <div class="memory-meta-item">
-              <span class="memory-meta-label">Photos</span>
-              <span class="memory-meta-value">${photoCount ? `${photoCount} attached` : "None"}</span>
-            </div>
-            <div class="memory-meta-item">
-              <span class="memory-meta-label">Status</span>
-              <span class="memory-meta-value">${entry.pinned ? "📌 Pinned" : "Saved Memory"}</span>
-            </div>
-          </div>
-
-          ${tags ? `<div class="tags" style="margin-top:14px">${tags}</div>` : ""}
-          ${photos ? `<div class="entry-photos" style="margin-top:14px">${photos}</div>` : ""}
-        </div>
-
-        <div class="memory-signature-footer">
-          <div class="memory-date">${escapeHTML(date)}</div>
-          <div class="memory-seal"><span class="memory-seal-dot"></span>Private Archive</div>
-        </div>
-
-        <div class="memory-actions">
+      <article class="entry entry-${type}" data-id="${escapeHTML(entry._id)}">
+        <div class="entry-meta">${label} · ${escapeHTML(date)} ${entry.pinned ? "· 📌 Pinned" : ""}</div>
+        <h3>${escapeHTML(entry.title || "Untitled")}</h3>
+        <p>${escapeHTML(entry.text || "")}</p>
+        ${tags ? `<div class="tags">${tags}</div>` : ""}
+        ${photos ? `<div class="entry-photos">${photos}</div>` : ""}
+        <div class="entry-actions">
           <button class="ghost" data-action="pin">${entry.pinned ? "📌 Unpin" : "📌 Pin"}</button>
           <button class="ghost" data-action="edit">✏️ Edit</button>
           <button class="ghost danger" data-action="delete">🗑 Delete</button>
