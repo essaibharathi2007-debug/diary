@@ -1650,6 +1650,10 @@ textarea{
 
   <p id="remStatus" style="color:var(--mut);font-size:13px;margin:8px 0 0;"></p>
 
+  <button type="button" class="ghost" id="remTestBtn" style="margin-top:10px;">
+    🔔 Test notification now
+  </button>
+
 </section>
 
 
@@ -3034,9 +3038,15 @@ function reminderStatusText() {
   const { enabled, time } = reminderSettings();
   if (!enabled) return "Reminder off pannirukku.";
   if (Notification.permission === "denied") {
-    return "Notification permission block aagirukku. Browser settings-la allow pannunga.";
+    return "Notification permission block aagirukku. Browser site settings-la Allow pannunga.";
   }
-  return `Every day ${time}-ku reminder varum.`;
+  if (Notification.permission !== "granted") {
+    return "Notification permission innum kudukala. Toggle-a ON pannunga.";
+  }
+  if (!location.protocol.startsWith("https") && location.hostname !== "localhost") {
+    return "Notification vela seiya HTTPS venum (http-la vேலை seiyaadhu).";
+  }
+  return `Every day ${time}-ku reminder varum. (Test button vechi ippove check pannalam.)`;
 }
 
 function renderReminderUI() {
@@ -3047,23 +3057,91 @@ function renderReminderUI() {
   $("remStatus").textContent = reminderStatusText();
 }
 
+/* Actually show a notification - tries the service worker first
+   (works even if the tab/app is backgrounded), then falls back to
+   a plain Notification, and reports back whether it truly fired so
+   the "Test now" button can tell the person the real result. */
+async function fireReminderNotification(body, tag) {
+  const title = "📔 Cool Diary";
+  const options = {
+    body: body || "Indha naal nadanadhu ellam oru entry-aa eluthunga ✍️",
+    icon: "/icon-192.png",
+    badge: "/icon-192.png",
+    tag: tag || "cool-diary-daily-reminder"
+  };
+
+  if (!("Notification" in window)) {
+    return { ok: false, reason: "Indha browser/device-la Notification API support pannala." };
+  }
+
+  if (Notification.permission !== "granted") {
+    return { ok: false, reason: "Permission granted illa." };
+  }
+
+  try {
+    if ("serviceWorker" in navigator) {
+      try {
+        const reg = await Promise.race([
+          navigator.serviceWorker.ready,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("sw-timeout")), 3000))
+        ]);
+        if (reg) {
+          await reg.showNotification(title, options);
+          return { ok: true };
+        }
+      } catch (_) {
+        /* service worker not ready in time - fall through to plain Notification */
+      }
+    }
+
+    new Notification(title, options);
+    return { ok: true };
+  } catch (error) {
+    console.warn("Reminder notification failed:", error);
+    return { ok: false, reason: error.message || "Notification fail aachu." };
+  }
+}
+
 async function onReminderToggle() {
   const wantsOn = $("remOn").checked;
 
-  if (wantsOn && "Notification" in window && Notification.permission === "default") {
-    const permission = await Notification.requestPermission();
-    if (permission !== "granted") {
-      $("remOn").checked = false;
-      saveReminderSettings(false, $("remTime").value);
-      $("remStatus").textContent = "Permission kudukalaina reminder work aagadhu.";
-      return;
-    }
+  if (!wantsOn) {
+    saveReminderSettings(false, $("remTime").value);
+    $("remStatus").textContent = reminderStatusText();
+    return;
   }
 
-  saveReminderSettings(wantsOn, $("remTime").value);
+  if (!("Notification" in window)) {
+    $("remOn").checked = false;
+    $("remStatus").textContent = "Indha browser/device-la Notification API support pannala.";
+    return;
+  }
+
+  let permission = Notification.permission;
+  if (permission === "default") {
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission !== "granted") {
+    $("remOn").checked = false;
+    saveReminderSettings(false, $("remTime").value);
+    $("remStatus").textContent = "Permission kudukalaina reminder work aagadhu.";
+    return;
+  }
+
+  saveReminderSettings(true, $("remTime").value);
   $("remStatus").textContent = reminderStatusText();
 
-  if (wantsOn) checkDailyReminder();
+  /* Immediate proof it's working - don't make them wait till the set time. */
+  const result = await fireReminderNotification(
+    "Reminder ON aachu! Every day intha time-ku ninaivu varum ✅",
+    "cool-diary-reminder-confirm"
+  );
+  if (!result.ok) {
+    $("remStatus").textContent = result.reason || reminderStatusText();
+  }
+
+  checkDailyReminder();
 }
 
 function onReminderTimeChange() {
@@ -3071,27 +3149,30 @@ function onReminderTimeChange() {
   $("remStatus").textContent = reminderStatusText();
 }
 
-async function fireReminderNotification() {
-  const title = "📔 Cool Diary";
-  const options = {
-    body: "Indha naal nadanadhu ellam oru entry-aa eluthunga ✍️",
-    icon: "/icon-192.png",
-    badge: "/icon-192.png",
-    tag: "cool-diary-daily-reminder"
-  };
-
-  try {
-    if ("serviceWorker" in navigator) {
-      const reg = await navigator.serviceWorker.getRegistration();
-      if (reg) {
-        await reg.showNotification(title, options);
-        return;
-      }
-    }
-    new Notification(title, options);
-  } catch (error) {
-    console.warn("Reminder notification failed:", error);
+async function onReminderTest() {
+  if (!("Notification" in window)) {
+    $("remStatus").textContent = "Indha browser/device-la Notification API support pannala.";
+    return;
   }
+
+  let permission = Notification.permission;
+  if (permission === "default") {
+    permission = await Notification.requestPermission();
+  }
+
+  if (permission !== "granted") {
+    $("remStatus").textContent = "Permission illama test notification anupa mudiyadhu. Site settings-la Allow pannunga.";
+    return;
+  }
+
+  const result = await fireReminderNotification(
+    "Idhu test notification - reminder set-up correct-ah irukku 👍",
+    "cool-diary-reminder-test"
+  );
+
+  $("remStatus").textContent = result.ok
+    ? "Test notification anupirukken - varutha check pannunga!"
+    : (result.reason || "Test notification fail aachu.");
 }
 
 function checkDailyReminder() {
@@ -3119,8 +3200,22 @@ function checkDailyReminder() {
 
 if ($("remOn")) $("remOn").addEventListener("change", onReminderToggle);
 if ($("remTime")) $("remTime").addEventListener("change", onReminderTimeChange);
+if ($("remTestBtn")) $("remTestBtn").addEventListener("click", onReminderTest);
 
-setInterval(checkDailyReminder, 60000);
+/* Background poll (works while the tab is open, foreground or not,
+   as long as the OS hasn't fully suspended the tab) ... */
+setInterval(checkDailyReminder, 20000);
+
+/* ...plus an immediate re-check every time the app becomes visible
+   or regains focus again. Mobile browsers throttle/pause JS timers
+   when a tab is backgrounded or the screen locks, so this is what
+   actually catches "reminder time passed while I wasn't looking" -
+   the moment they reopen the app, it fires right away. */
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") checkDailyReminder();
+});
+window.addEventListener("focus", checkDailyReminder);
+window.addEventListener("pageshow", checkDailyReminder);
 
 function updateDashboard() {
   $("greeting").textContent = `${greeting()}, ${(U && U.name) || "friend"} 👋`;
